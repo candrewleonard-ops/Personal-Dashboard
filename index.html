@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';" />
+  <title>Reinnovation Homes Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 60 L60 18 L105 60 L105 105 L15 105 Z"
+                  fill="none" stroke="currentColor" stroke-width="9"
+                  stroke-linejoin="round" />
+            <text x="60" y="88" text-anchor="middle"
+                  font-family="Arial Black, Helvetica, sans-serif"
+                  font-size="46" font-weight="900" fill="currentColor">Re</text>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-line-1">REINNOVATION</div>
+          <div class="brand-line-2">HOMES</div>
+        </div>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">
+          <span class="tab-icon">&#9632;</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="tab" data-tab="focus">
+          <span class="tab-icon">&#9733;</span>
+          <span>Focus &amp; Habits</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="live-clock" id="sidebar-clock">--:--:--</div>
+        <div class="live-date" id="sidebar-date">&nbsp;</div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- =================== DASHBOARD =================== -->
+      <section class="page active" id="page-dashboard">
+        <header class="page-header">
+          <div>
+            <div class="greeting" id="greeting">Good morning</div>
+            <h1 class="headline" id="headline-date">Loading&hellip;</h1>
+            <div class="subline" id="headline-time">&nbsp;</div>
+          </div>
+          <div class="day-nav">
+            <button class="nav-btn" id="day-prev" title="Previous day">&larr;</button>
+            <button class="nav-btn today" id="day-today" title="Jump to today">Today</button>
+            <button class="nav-btn" id="day-next" title="Next day">&rarr;</button>
+          </div>
+        </header>
+
+        <div class="grid">
+          <div class="card tasks-card">
+            <div class="card-head">
+              <h2>Tasks</h2>
+              <div class="card-head-right">
+                <div class="counter" id="task-counter">0 / 0</div>
+                <button class="add-btn" id="add-task-btn" title="Add task">+</button>
+              </div>
+            </div>
+            <ul class="task-list" id="task-list"></ul>
+            <div class="empty-state" id="task-empty">No tasks yet. Hit the + to plan your day.</div>
+          </div>
+
+          <div class="card stats-card">
+            <div class="card-head">
+              <h2>Today at a glance</h2>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat-label">Tasks done</div>
+                <div class="stat-value" id="stat-done">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Open tasks</div>
+                <div class="stat-value" id="stat-open">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Habit streaks</div>
+                <div class="stat-value" id="stat-streaks">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Focus minutes</div>
+                <div class="stat-value" id="stat-focus">0</div>
+              </div>
+            </div>
+            <div class="progress-block">
+              <div class="progress-label">
+                <span>Day progress</span>
+                <span id="progress-pct">0%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== FOCUS & HABITS =================== -->
+      <section class="page" id="page-focus">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Stay locked in</div>
+            <h1 class="headline">Focus &amp; Habits</h1>
+            <div class="subline">Pomodoro sessions + daily habit streaks to keep your edge.</div>
+          </div>
+        </header>
+
+        <div class="grid focus-grid">
+          <div class="card pomodoro-card">
+            <div class="card-head">
+              <h2>Focus Session</h2>
+              <div class="pomodoro-mode">
+                <button class="mode-btn active" data-minutes="25">25m Focus</button>
+                <button class="mode-btn" data-minutes="5">5m Break</button>
+                <button class="mode-btn" data-minutes="50">50m Deep</button>
+              </div>
+            </div>
+            <div class="timer-display" id="timer-display">25:00</div>
+            <div class="timer-controls">
+              <button class="timer-btn primary" id="timer-start">Start</button>
+              <button class="timer-btn" id="timer-pause">Pause</button>
+              <button class="timer-btn" id="timer-reset">Reset</button>
+            </div>
+            <div class="pomodoro-stats">
+              <div>Sessions today: <b id="pomo-sessions">0</b></div>
+              <div>Focus minutes: <b id="pomo-minutes">0</b></div>
+            </div>
+          </div>
+
+          <div class="card habits-card">
+            <div class="card-head">
+              <h2>Habit Streaks</h2>
+              <button class="add-btn" id="add-habit-btn" title="Add habit">+</button>
+            </div>
+            <ul class="habit-list" id="habit-list"></ul>
+            <div class="empty-state" id="habit-empty">
+              No habits yet. Click + to start a streak.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =================== MODAL =================== -->
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <div class="modal" id="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">Add Task</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-foot">
+        <button class="btn secondary" id="modal-cancel">Cancel</button>
+        <button class="btn primary" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

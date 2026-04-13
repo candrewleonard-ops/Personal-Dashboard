@@ -1,0 +1,41 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Reinnovation Dashboard (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows installer and portable exe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reinnovation-Dashboard-Windows
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 30

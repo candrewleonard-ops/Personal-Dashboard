@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="40" fill="#f2f1ec"/>
+  <g fill="none" stroke="#142a4c" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M44 144 L128 56 L212 144 L212 212 L44 212 Z"/>
+  </g>
+  <text x="128" y="190" text-anchor="middle"
+        font-family="Arial Black, Helvetica, sans-serif"
+        font-size="96" font-weight="900" fill="#142a4c">Re</text>
+</svg>

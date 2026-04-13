@@ -1,0 +1,50 @@
+{
+  "name": "reinnovation-dashboard",
+  "version": "1.0.0",
+  "description": "Personal dashboard for Reinnovation Homes — calendar, tasks, investor debt schedule, and focus tracking.",
+  "main": "main.js",
+  "author": "Reinnovation Homes",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win --x64",
+    "dist:portable": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.3.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.reinnovationhomes.dashboard",
+    "productName": "Reinnovation Dashboard",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "renderer.js",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Reinnovation Dashboard"
+    }
+  }
+}
