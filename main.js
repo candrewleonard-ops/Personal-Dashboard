@@ -7,14 +7,12 @@ let mainWindow;
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const FILES = {
   tasks: path.join(DATA_DIR, 'tasks.json'),
-  debts: path.join(DATA_DIR, 'debts.json'),
   habits: path.join(DATA_DIR, 'habits.json'),
   settings: path.join(DATA_DIR, 'settings.json')
 };
 
 const DEFAULTS = {
   tasks: {},
-  debts: [],
   habits: { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } },
   settings: { theme: 'dark' }
 };

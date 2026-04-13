@@ -1,13 +1,16 @@
 {
   "name": "reinnovation-dashboard",
   "version": "1.0.0",
-  "description": "Personal dashboard for Reinnovation Homes — calendar, tasks, investor debt schedule, and focus tracking.",
+  "description": "Personal dashboard for Reinnovation Homes — calendar, tasks, Pomodoro focus timer, and habit streaks.",
   "main": "main.js",
   "author": "Reinnovation Homes",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
+    "icon": "node scripts/generate-icon.js",
     "start": "electron .",
+    "prepack": "node scripts/generate-icon.js",
+    "predist": "node scripts/generate-icon.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --x64",
     "dist:portable": "electron-builder --win portable --x64"
