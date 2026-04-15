@@ -3,7 +3,11 @@
  * Tasks / Calendar / Pomodoro / Habits
  * ============================================================= */
 
-const api = window.api;
+/* The preload script exposes the storage bridge as window.api. We alias it
+ * to `bridge` locally — using `api` here would collide with the script-level
+ * binding contextBridge.exposeInMainWorld() creates in contextIsolation mode
+ * and throw "Identifier 'api' has already been declared" before any code runs. */
+const bridge = window.api;
 
 /* ------------------- STATE ------------------- */
 const state = {
@@ -70,8 +74,8 @@ function fmtMoney(n) {
 
 /* ------------------- STORAGE ------------------- */
 async function loadAll() {
-  state.tasks  = (await api.store.get('tasks'))  || {};
-  state.habits = (await api.store.get('habits')) || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
+  state.tasks  = (await bridge.store.get('tasks'))  || {};
+  state.habits = (await bridge.store.get('habits')) || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
 
   // Reset pomodoro counter at date change
   const t = todayKey();
@@ -83,8 +87,8 @@ async function loadAll() {
   }
 }
 
-async function saveTasks()  { await api.store.set('tasks',  state.tasks); }
-async function saveHabits() { await api.store.set('habits', state.habits); }
+async function saveTasks()  { await bridge.store.set('tasks',  state.tasks); }
+async function saveHabits() { await bridge.store.set('habits', state.habits); }
 
 /* ------------------- TABS ------------------- */
 function initTabs() {
@@ -806,33 +810,61 @@ function reconcileHabitStreaks() {
 }
 
 /* ------------------- INIT ------------------- */
+// Defensive wrapper: run a step, log any failure, keep going. Prevents one
+// broken init step from leaving the whole UI stuck on "Loading…".
+function safeStep(label, fn) {
+  try { fn(); } catch (err) { console.error(`[init:${label}]`, err); }
+}
+
 async function init() {
-  await loadAll();
-  reconcileHabitStreaks();
-  await saveHabits();
+  // Render the header first so the "Loading…" placeholder is replaced
+  // immediately, even before we try to touch storage.
+  safeStep('renderHeader', renderHeader);
+  safeStep('tickClock', tickClock);
 
-  initTabs();
-  initDayNav();
-  initCalendar();
-  initPomodoro();
+  if (!bridge || !bridge.store) {
+    console.error('[init] window.api bridge missing — preload script did not load');
+    alert('Dashboard failed to start: storage bridge unavailable');
+    return;
+  }
 
-  document.getElementById('add-task-btn').addEventListener('click', () => openTaskModal(null));
-  document.getElementById('add-habit-btn').addEventListener('click', openHabitModal);
+  try {
+    await loadAll();
+  } catch (err) {
+    console.error('[init:loadAll]', err);
+    // Fall through with empty defaults so the UI still works.
+    state.tasks = state.tasks || {};
+    state.habits = state.habits || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
+  }
 
-  renderHeader();
-  renderTasks();
-  renderStats();
-  renderCalendar();
-  renderHabits();
+  safeStep('reconcileHabitStreaks', reconcileHabitStreaks);
+  try { await saveHabits(); } catch (err) { console.error('[init:saveHabits]', err); }
 
-  tickClock();
-  setInterval(tickClock, 1000);
+  safeStep('initTabs', initTabs);
+  safeStep('initDayNav', initDayNav);
+  safeStep('initCalendar', initCalendar);
+  safeStep('initPomodoro', initPomodoro);
+
+  safeStep('add-task-btn listener', () => {
+    document.getElementById('add-task-btn').addEventListener('click', () => openTaskModal(null));
+  });
+  safeStep('add-habit-btn listener', () => {
+    document.getElementById('add-habit-btn').addEventListener('click', openHabitModal);
+  });
+
+  safeStep('renderHeader (post-load)', renderHeader);
+  safeStep('renderTasks', renderTasks);
+  safeStep('renderStats', renderStats);
+  safeStep('renderCalendar', renderCalendar);
+  safeStep('renderHabits', renderHabits);
+
+  setInterval(() => safeStep('tickClock', tickClock), 1000);
 
   // Auto-refresh header/greeting at midnight flip
   setInterval(() => {
     const now = new Date();
     if (sameDay(state.currentDate, now)) {
-      renderHeader();
+      safeStep('renderHeader (interval)', renderHeader);
     }
   }, 30000);
 }
