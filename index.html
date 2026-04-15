@@ -33,6 +33,10 @@
           <span class="tab-icon">&#9632;</span>
           <span>Dashboard</span>
         </button>
+        <button class="tab" data-tab="calendar">
+          <span class="tab-icon">&#128197;</span>
+          <span>Calendar</span>
+        </button>
         <button class="tab" data-tab="focus">
           <span class="tab-icon">&#9733;</span>
           <span>Focus &amp; Habits</span>
@@ -105,6 +109,47 @@
               </div>
               <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== CALENDAR =================== -->
+      <section class="page" id="page-calendar">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Plan your month</div>
+            <h1 class="headline" id="calendar-month-title">Loading&hellip;</h1>
+            <div class="subline">Click any day to manage its to&#8209;dos.</div>
+          </div>
+          <div class="day-nav">
+            <button class="nav-btn" id="cal-prev" title="Previous month">&larr;</button>
+            <button class="nav-btn today" id="cal-today" title="Jump to this month">This Month</button>
+            <button class="nav-btn" id="cal-next" title="Next month">&rarr;</button>
+          </div>
+        </header>
+
+        <div class="grid calendar-layout">
+          <div class="card calendar-card">
+            <div class="calendar-weekdays">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+              <div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+          </div>
+
+          <div class="card day-tasks-card">
+            <div class="card-head">
+              <div>
+                <h2 id="day-tasks-title">Today</h2>
+                <div class="day-tasks-sub" id="day-tasks-sub">&nbsp;</div>
+              </div>
+              <div class="card-head-right">
+                <div class="counter" id="day-tasks-counter">0 / 0</div>
+                <button class="add-btn" id="add-day-task-btn" title="Add task">+</button>
+              </div>
+            </div>
+            <ul class="task-list" id="day-task-list"></ul>
+            <div class="empty-state" id="day-task-empty">No to&#8209;dos for this day. Tap + to add one.</div>
           </div>
         </div>
       </section>
