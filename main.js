@@ -10,7 +10,11 @@ const FILES = {
   habits: path.join(DATA_DIR, 'habits.json'),
   settings: path.join(DATA_DIR, 'settings.json'),
   expenses: path.join(DATA_DIR, 'expenses.json'),
-  cashflow: path.join(DATA_DIR, 'cashflow.json')
+  cashflow: path.join(DATA_DIR, 'cashflow.json'),
+  income: path.join(DATA_DIR, 'income.json'),
+  notes: path.join(DATA_DIR, 'notes.json'),
+  deals: path.join(DATA_DIR, 'deals.json'),
+  investors: path.join(DATA_DIR, 'investors.json')
 };
 
 const DEFAULTS = {
@@ -18,7 +22,11 @@ const DEFAULTS = {
   habits: { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } },
   settings: { theme: 'dark' },
   expenses: {},
-  cashflow: { startingBalance: 0, startingDate: null }
+  cashflow: { startingBalance: 0, startingDate: null },
+  income: {},
+  notes: {},
+  deals: [],
+  investors: []
 };
 
 function ensureDataDir() {

@@ -747,6 +747,233 @@ input:focus, textarea:focus, select:focus {
   color: var(--danger);
   margin-top: auto;
 }
+.cal-income-total {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--success);
+}
+
+/* Income list (green variant) */
+.income-list .expense-item.paid .expense-check { background: var(--success); border-color: var(--success); }
+.income-list .expense-amount { color: var(--success); }
+.income-list .expense-item.paid .expense-amount { color: var(--text-muted); }
+
+/* Daily notes */
+.day-notes {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Dashboard 3-col grid */
+.dash-grid { grid-template-columns: 2fr 1fr 1fr; }
+@media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
+
+/* Deadlines widget */
+.deadlines-card { max-height: 500px; overflow-y: auto; }
+.deadline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.deadline-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius-sm);
+}
+.deadline-date {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-2);
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-width: 50px;
+}
+.deadline-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deadline-amount {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--danger);
+  white-space: nowrap;
+}
+.deadline-type {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.deadline-type.expense { background: rgba(255, 77, 109, 0.15); color: var(--danger); }
+.deadline-type.task    { background: rgba(77, 163, 255, 0.15); color: var(--accent); }
+
+/* ============================= KANBAN ============================= */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  align-items: flex-start;
+}
+@media (max-width: 1200px) { .kanban { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 800px)  { .kanban { grid-template-columns: 1fr; } }
+.kanban-col {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-height: 200px;
+}
+.kanban-col-head {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--brand-navy-line);
+}
+.kanban-cards { display: flex; flex-direction: column; gap: 10px; }
+.deal-card {
+  background: linear-gradient(180deg, var(--brand-navy-2), var(--brand-navy));
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: default;
+  transition: all 0.15s;
+}
+.deal-card:hover { border-color: var(--accent); }
+.deal-address {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.deal-meta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.deal-meta-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.deal-meta-tag b { color: var(--text); }
+.deal-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.deal-actions button {
+  background: var(--brand-navy-3);
+  border: 1px solid var(--brand-navy-line);
+  color: var(--text-dim);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.deal-actions button:hover { color: #fff; border-color: var(--accent); }
+.deal-actions button.danger:hover { color: var(--danger); border-color: var(--danger); }
+.deal-actions button.advance {
+  background: linear-gradient(135deg, rgba(77, 163, 255, 0.2), rgba(77, 163, 255, 0.08));
+  color: var(--accent-2);
+  border-color: rgba(77, 163, 255, 0.3);
+}
+
+/* ============================= INVESTORS ============================= */
+.investor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+.investor-card {
+  background: linear-gradient(180deg, var(--brand-navy-2), var(--brand-navy));
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+.investor-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.investor-notes {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+.investor-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.investor-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.investor-stat .stat-label { font-size: 9px; }
+.investor-stat .stat-value { font-size: 20px; margin-top: 2px; }
+.investor-history {
+  border-top: 1px solid var(--brand-navy-line);
+  padding-top: 12px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.investor-history::-webkit-scrollbar { width: 6px; }
+.investor-history::-webkit-scrollbar-thumb { background: var(--brand-navy-3); border-radius: 6px; }
+.investor-history-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.history-row .h-date { min-width: 80px; }
+.history-row .h-label { flex: 1; color: var(--text); }
+.history-row .h-amount { font-weight: 800; color: var(--danger); }
+.history-row .h-amount.paid { color: var(--success); }
+.investor-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
 
 /* ============================= STATS ============================= */
 .stat-grid {

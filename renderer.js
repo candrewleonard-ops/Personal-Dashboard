@@ -24,7 +24,11 @@ const state = {
    *     category:'investor_debt', paid:false, recurring:true }
    * and place them under the correct 'YYYY-MM-DD' key. */
   expenses: {},
+  income: {},
   cashflow: { startingBalance: 0, startingDate: null },
+  notes: {},
+  deals: [],
+  investors: [],
   currentDate: new Date(),   // currently-viewed day on Dashboard
   calendarMonth: new Date(), // anchors the month shown on Calendar
   selectedDate: new Date(),  // day highlighted in the Calendar side panel
@@ -85,8 +89,12 @@ function fmtMoney(n) {
 async function loadAll() {
   state.tasks    = (await bridge.store.get('tasks'))    || {};
   state.habits   = (await bridge.store.get('habits'))   || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
-  state.expenses = (await bridge.store.get('expenses')) || {};
-  state.cashflow = (await bridge.store.get('cashflow')) || { startingBalance: 0, startingDate: null };
+  state.expenses  = (await bridge.store.get('expenses'))  || {};
+  state.income    = (await bridge.store.get('income'))    || {};
+  state.cashflow  = (await bridge.store.get('cashflow'))  || { startingBalance: 0, startingDate: null };
+  state.notes     = (await bridge.store.get('notes'))     || {};
+  state.deals     = (await bridge.store.get('deals'))     || [];
+  state.investors = (await bridge.store.get('investors')) || [];
 
   // Reset pomodoro counter at date change
   const t = todayKey();
@@ -100,8 +108,12 @@ async function loadAll() {
 
 async function saveTasks()    { await bridge.store.set('tasks',    state.tasks); }
 async function saveHabits()   { await bridge.store.set('habits',   state.habits); }
-async function saveExpenses() { await bridge.store.set('expenses', state.expenses); }
-async function saveCashflow() { await bridge.store.set('cashflow', state.cashflow); }
+async function saveExpenses()  { await bridge.store.set('expenses',  state.expenses); }
+async function saveCashflow()  { await bridge.store.set('cashflow',  state.cashflow); }
+async function saveIncome()    { await bridge.store.set('income',    state.income); }
+async function saveNotes()     { await bridge.store.set('notes',     state.notes); }
+async function saveDeals()     { await bridge.store.set('deals',     state.deals); }
+async function saveInvestors() { await bridge.store.set('investors', state.investors); }
 
 /* ------------------- TABS ------------------- */
 function initTabs() {
@@ -117,8 +129,13 @@ function initTabs() {
         renderHeader();
         renderTasks();
         renderStats();
+        renderDeadlines();
       } else if (target === 'calendar') {
         renderCalendar();
+      } else if (target === 'deals') {
+        renderDeals();
+      } else if (target === 'investors') {
+        renderInvestors();
       }
     });
   });
@@ -337,6 +354,9 @@ function initCalendar() {
   document.getElementById('add-expense-btn').addEventListener('click', () => {
     openExpenseModal(null, state.selectedDate);
   });
+  document.getElementById('add-income-btn').addEventListener('click', () => {
+    openIncomeModal(state.selectedDate);
+  });
   document.getElementById('cash-on-hand').addEventListener('click', openSetBalanceModal);
 
   document.addEventListener('keydown', (e) => {
@@ -438,6 +458,15 @@ function renderCalendar() {
       cell.appendChild(count);
     }
 
+    const dayInc = state.income[key] || [];
+    if (dayInc.length > 0) {
+      const incTotal = dayInc.reduce((s, x) => s + (x.amount || 0), 0);
+      const incLabel = document.createElement('div');
+      incLabel.className = 'cal-income-total';
+      incLabel.textContent = '+' + fmtMoney(incTotal);
+      cell.appendChild(incLabel);
+    }
+
     if (dayExp.length > 0) {
       const total = dayExp.reduce((s, e) => s + (e.amount || 0), 0);
       const expLabel = document.createElement('div');
@@ -459,8 +488,10 @@ function renderCalendar() {
   }
 
   renderCalendarTasks();
+  renderIncomeSidebar();
   renderExpenses();
   renderCashTracker();
+  renderDayNotes();
 }
 
 function renderCalendarTasks() {
@@ -603,21 +634,28 @@ function getRunningBalance(targetDate) {
   if (!cf.startingDate) return { cashOnHand: 0, projected: 0 };
   const start = new Date(cf.startingDate + 'T12:00:00');
   const end = new Date(dateKey(targetDate) + 'T12:00:00');
-  let paidTotal = 0;
-  let allTotal = 0;
+  let paidExpenses = 0;
+  let allExpenses = 0;
+  let receivedIncome = 0;
+  let allIncome = 0;
   const d = new Date(start);
   while (d <= end) {
     const key = dateKey(d);
     const dayExp = state.expenses[key] || [];
     for (const e of dayExp) {
-      allTotal += e.amount || 0;
-      if (e.paid) paidTotal += e.amount || 0;
+      allExpenses += e.amount || 0;
+      if (e.paid) paidExpenses += e.amount || 0;
+    }
+    const dayInc = state.income[key] || [];
+    for (const inc of dayInc) {
+      allIncome += inc.amount || 0;
+      if (inc.received) receivedIncome += inc.amount || 0;
     }
     d.setDate(d.getDate() + 1);
   }
   return {
-    cashOnHand: cf.startingBalance - paidTotal,
-    projected: cf.startingBalance - allTotal
+    cashOnHand: cf.startingBalance + receivedIncome - paidExpenses,
+    projected: cf.startingBalance + allIncome - allExpenses
   };
 }
 
@@ -790,6 +828,452 @@ function openExpenseModal(existing, date) {
     renderExpenses();
     renderCashTracker();
     renderCalendar();
+  });
+}
+
+/* ------------------- INCOME ------------------- */
+function getDayIncome(date) {
+  const d = date || state.selectedDate;
+  const key = dateKey(d);
+  if (!state.income[key]) state.income[key] = [];
+  return state.income[key];
+}
+
+function renderIncomeSidebar() {
+  const d = state.selectedDate;
+  const list = document.getElementById('income-list');
+  const empty = document.getElementById('income-empty');
+  const items = getDayIncome(d);
+
+  list.innerHTML = '';
+  empty.style.display = items.length === 0 ? 'block' : 'none';
+
+  items.forEach(inc => {
+    const li = document.createElement('li');
+    li.className = 'expense-item' + (inc.received ? ' paid' : '');
+
+    const cb = document.createElement('button');
+    cb.className = 'expense-check';
+    cb.title = inc.received ? 'Received' : 'Mark received';
+    cb.addEventListener('click', async () => {
+      inc.received = !inc.received;
+      await saveIncome();
+      renderIncomeSidebar();
+      renderCashTracker();
+      renderCalendar();
+    });
+    li.appendChild(cb);
+
+    const info = document.createElement('div');
+    info.className = 'expense-info';
+    const label = document.createElement('div');
+    label.className = 'expense-label';
+    label.textContent = inc.label;
+    info.appendChild(label);
+    if (inc.notes) {
+      const notes = document.createElement('div');
+      notes.className = 'expense-notes';
+      notes.textContent = inc.notes;
+      info.appendChild(notes);
+    }
+    li.appendChild(info);
+
+    const amt = document.createElement('div');
+    amt.className = 'expense-amount';
+    amt.textContent = '+' + fmtMoney(inc.amount);
+    li.appendChild(amt);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'task-icon-btn danger';
+    delBtn.title = 'Delete';
+    delBtn.innerHTML = '&times;';
+    delBtn.addEventListener('click', async () => {
+      const dayInc = getDayIncome(d);
+      const i = dayInc.findIndex(x => x.id === inc.id);
+      if (i >= 0) dayInc.splice(i, 1);
+      await saveIncome();
+      renderIncomeSidebar();
+      renderCashTracker();
+      renderCalendar();
+    });
+    li.appendChild(delBtn);
+
+    list.appendChild(li);
+  });
+}
+
+function openIncomeModal(date) {
+  const niceDate = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  openModal(`Add Income — ${niceDate}`, `
+    <div>
+      <label>Source</label>
+      <input type="text" id="inc-label" placeholder="e.g. Investor funding - Johnson" maxlength="120" />
+    </div>
+    <div>
+      <label>Amount ($)</label>
+      <input type="number" id="inc-amount" placeholder="0.00" min="0" step="0.01" />
+    </div>
+    <div>
+      <label>Notes</label>
+      <textarea id="inc-notes" rows="2" placeholder="Wire details, source, etc."></textarea>
+    </div>
+  `, async () => {
+    const label = document.getElementById('inc-label').value.trim();
+    const amount = parseFloat(document.getElementById('inc-amount').value) || 0;
+    const notes = document.getElementById('inc-notes').value.trim();
+    if (!label || amount <= 0) return;
+    const dayInc = getDayIncome(date);
+    dayInc.push({ id: uid(), label, amount, notes, received: false, createdAt: Date.now() });
+    await saveIncome();
+    closeModal();
+    renderIncomeSidebar();
+    renderCashTracker();
+    renderCalendar();
+  });
+}
+
+/* ------------------- DAILY NOTES ------------------- */
+function renderDayNotes() {
+  const key = dateKey(state.selectedDate);
+  const el = document.getElementById('day-notes');
+  el.value = state.notes[key] || '';
+}
+
+function initDayNotes() {
+  const el = document.getElementById('day-notes');
+  let saveTimer = null;
+  el.addEventListener('input', () => {
+    const key = dateKey(state.selectedDate);
+    state.notes[key] = el.value;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveNotes(), 600);
+  });
+}
+
+/* ------------------- UPCOMING DEADLINES ------------------- */
+function renderDeadlines() {
+  const list = document.getElementById('deadline-list');
+  const empty = document.getElementById('deadline-empty');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const items = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const key = dateKey(d);
+    const shortDate = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+    (state.expenses[key] || []).forEach(e => {
+      if (!e.paid) items.push({ date: shortDate, label: e.label, amount: e.amount, type: 'expense' });
+    });
+    (state.tasks[key] || []).forEach(t => {
+      if (!t.done) items.push({ date: shortDate, label: t.text, amount: null, type: 'task' });
+    });
+  }
+
+  empty.style.display = items.length === 0 ? 'block' : 'none';
+
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'deadline-item';
+
+    const date = document.createElement('div');
+    date.className = 'deadline-date';
+    date.textContent = item.date;
+    li.appendChild(date);
+
+    const label = document.createElement('div');
+    label.className = 'deadline-label';
+    label.textContent = item.label;
+    li.appendChild(label);
+
+    const tag = document.createElement('span');
+    tag.className = 'deadline-type ' + item.type;
+    tag.textContent = item.type === 'expense' ? 'Expense' : 'Task';
+    li.appendChild(tag);
+
+    if (item.amount) {
+      const amt = document.createElement('div');
+      amt.className = 'deadline-amount';
+      amt.textContent = fmtMoney(item.amount);
+      li.appendChild(amt);
+    }
+
+    list.appendChild(li);
+  });
+}
+
+/* ------------------- DEAL PIPELINE ------------------- */
+const DEAL_STAGES = ['lead', 'under_contract', 'due_diligence', 'closing', 'closed'];
+const STAGE_LABELS = { lead: 'Lead', under_contract: 'Under Contract', due_diligence: 'Due Diligence', closing: 'Closing', closed: 'Closed' };
+
+function renderDeals() {
+  DEAL_STAGES.forEach(stage => {
+    const col = document.getElementById('kanban-' + stage);
+    if (!col) return;
+    col.innerHTML = '';
+    state.deals.filter(d => d.stage === stage).forEach(deal => {
+      col.appendChild(createDealCard(deal));
+    });
+  });
+}
+
+function createDealCard(deal) {
+  const card = document.createElement('div');
+  card.className = 'deal-card';
+
+  const addr = document.createElement('div');
+  addr.className = 'deal-address';
+  addr.textContent = deal.address || 'No address';
+  card.appendChild(addr);
+
+  const meta = document.createElement('div');
+  meta.className = 'deal-meta-row';
+  if (deal.purchasePrice) {
+    const pp = document.createElement('span');
+    pp.className = 'deal-meta-tag';
+    pp.innerHTML = `PP: <b>${fmtMoney(deal.purchasePrice)}</b>`;
+    meta.appendChild(pp);
+  }
+  if (deal.arv) {
+    const arv = document.createElement('span');
+    arv.className = 'deal-meta-tag';
+    arv.innerHTML = `ARV: <b>${fmtMoney(deal.arv)}</b>`;
+    meta.appendChild(arv);
+  }
+  if (deal.notes) {
+    const n = document.createElement('span');
+    n.className = 'deal-meta-tag';
+    n.textContent = deal.notes;
+    meta.appendChild(n);
+  }
+  card.appendChild(meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'deal-actions';
+
+  const si = DEAL_STAGES.indexOf(deal.stage);
+  if (si > 0) {
+    const backBtn = document.createElement('button');
+    backBtn.textContent = '← ' + STAGE_LABELS[DEAL_STAGES[si - 1]];
+    backBtn.addEventListener('click', async () => {
+      deal.stage = DEAL_STAGES[si - 1];
+      await saveDeals();
+      renderDeals();
+    });
+    actions.appendChild(backBtn);
+  }
+  if (si < DEAL_STAGES.length - 1) {
+    const fwdBtn = document.createElement('button');
+    fwdBtn.className = 'advance';
+    fwdBtn.textContent = STAGE_LABELS[DEAL_STAGES[si + 1]] + ' →';
+    fwdBtn.addEventListener('click', async () => {
+      deal.stage = DEAL_STAGES[si + 1];
+      await saveDeals();
+      renderDeals();
+    });
+    actions.appendChild(fwdBtn);
+  }
+
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit';
+  editBtn.addEventListener('click', () => openDealModal(deal));
+  actions.appendChild(editBtn);
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'danger';
+  delBtn.textContent = 'Delete';
+  delBtn.addEventListener('click', async () => {
+    state.deals = state.deals.filter(d => d.id !== deal.id);
+    await saveDeals();
+    renderDeals();
+  });
+  actions.appendChild(delBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+function openDealModal(existing) {
+  const isEdit = !!existing;
+  openModal(isEdit ? 'Edit Deal' : 'New Deal', `
+    <div>
+      <label>Property Address</label>
+      <input type="text" id="deal-address" placeholder="123 Main St, City, ST" maxlength="200"
+             value="${existing ? escapeAttr(existing.address) : ''}" />
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Purchase Price ($)</label>
+        <input type="number" id="deal-pp" placeholder="0" min="0"
+               value="${existing ? existing.purchasePrice || '' : ''}" />
+      </div>
+      <div>
+        <label>ARV ($)</label>
+        <input type="number" id="deal-arv" placeholder="0" min="0"
+               value="${existing ? existing.arv || '' : ''}" />
+      </div>
+    </div>
+    <div>
+      <label>Notes</label>
+      <textarea id="deal-notes" rows="2" placeholder="Key dates, contract terms...">${existing ? escapeAttr(existing.notes || '') : ''}</textarea>
+    </div>
+  `, async () => {
+    const address = document.getElementById('deal-address').value.trim();
+    if (!address) return;
+    const pp = parseFloat(document.getElementById('deal-pp').value) || 0;
+    const arv = parseFloat(document.getElementById('deal-arv').value) || 0;
+    const notes = document.getElementById('deal-notes').value.trim();
+    if (isEdit) {
+      existing.address = address;
+      existing.purchasePrice = pp;
+      existing.arv = arv;
+      existing.notes = notes;
+    } else {
+      state.deals.push({ id: uid(), address, purchasePrice: pp, arv, notes, stage: 'lead', createdAt: Date.now() });
+    }
+    await saveDeals();
+    closeModal();
+    renderDeals();
+  });
+}
+
+/* ------------------- INVESTORS ------------------- */
+function getInvestorExpenses(investor) {
+  const name = investor.name.toLowerCase();
+  const results = [];
+  for (const [dateStr, exps] of Object.entries(state.expenses)) {
+    for (const e of exps) {
+      if (e.category === 'investor_debt' && e.label.toLowerCase().includes(name)) {
+        results.push({ ...e, dateStr });
+      }
+    }
+  }
+  results.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+  return results;
+}
+
+function renderInvestors() {
+  const grid = document.getElementById('investor-grid');
+  const empty = document.getElementById('investor-empty');
+  if (!grid) return;
+  grid.innerHTML = '';
+  empty.style.display = state.investors.length === 0 ? 'block' : 'none';
+
+  state.investors.forEach(inv => {
+    const card = document.createElement('div');
+    card.className = 'investor-card';
+
+    const name = document.createElement('div');
+    name.className = 'investor-name';
+    name.textContent = inv.name;
+    card.appendChild(name);
+
+    if (inv.notes) {
+      const notes = document.createElement('div');
+      notes.className = 'investor-notes';
+      notes.textContent = inv.notes;
+      card.appendChild(notes);
+    }
+
+    const expenses = getInvestorExpenses(inv);
+    const totalOwed = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+    const totalPaid = expenses.filter(e => e.paid).reduce((s, e) => s + (e.amount || 0), 0);
+    const outstanding = totalOwed - totalPaid;
+    const activeDeals = state.deals.filter(d => d.stage !== 'closed').length;
+
+    const stats = document.createElement('div');
+    stats.className = 'investor-stats';
+    [
+      ['Capital Deployed', fmtMoney(inv.capitalDeployed || 0)],
+      ['Returns Paid', fmtMoney(totalPaid)],
+      ['Outstanding', fmtMoney(outstanding)]
+    ].forEach(([label, value]) => {
+      const s = document.createElement('div');
+      s.className = 'investor-stat';
+      s.innerHTML = `<div class="stat-label">${label}</div><div class="stat-value">${value}</div>`;
+      stats.appendChild(s);
+    });
+    card.appendChild(stats);
+
+    if (expenses.length > 0) {
+      const history = document.createElement('div');
+      history.className = 'investor-history';
+      const hTitle = document.createElement('div');
+      hTitle.className = 'investor-history-title';
+      hTitle.textContent = 'Payment History';
+      history.appendChild(hTitle);
+
+      expenses.forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'history-row';
+        const d = new Date(e.dateStr + 'T12:00:00');
+        row.innerHTML = `
+          <span class="h-date">${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          <span class="h-label">${escapeAttr(e.label)}</span>
+          <span class="h-amount ${e.paid ? 'paid' : ''}">${fmtMoney(e.amount)}</span>
+        `;
+        history.appendChild(row);
+      });
+      card.appendChild(history);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'investor-card-actions';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'icon-btn';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => openInvestorModal(inv));
+    actions.appendChild(editBtn);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn danger';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', async () => {
+      state.investors = state.investors.filter(x => x.id !== inv.id);
+      await saveInvestors();
+      renderInvestors();
+    });
+    actions.appendChild(delBtn);
+    card.appendChild(actions);
+
+    grid.appendChild(card);
+  });
+}
+
+function openInvestorModal(existing) {
+  const isEdit = !!existing;
+  openModal(isEdit ? 'Edit Investor' : 'Add Investor', `
+    <div>
+      <label>Name</label>
+      <input type="text" id="inv-name" placeholder="John Smith" maxlength="100"
+             value="${existing ? escapeAttr(existing.name) : ''}" />
+    </div>
+    <div>
+      <label>Capital Deployed ($)</label>
+      <input type="number" id="inv-capital" placeholder="0" min="0"
+             value="${existing ? existing.capitalDeployed || '' : ''}" />
+    </div>
+    <div>
+      <label>Notes</label>
+      <textarea id="inv-notes" rows="2" placeholder="Terms, contact info...">${existing ? escapeAttr(existing.notes || '') : ''}</textarea>
+    </div>
+  `, async () => {
+    const name = document.getElementById('inv-name').value.trim();
+    if (!name) return;
+    const capital = parseFloat(document.getElementById('inv-capital').value) || 0;
+    const notes = document.getElementById('inv-notes').value.trim();
+    if (isEdit) {
+      existing.name = name;
+      existing.capitalDeployed = capital;
+      existing.notes = notes;
+    } else {
+      state.investors.push({ id: uid(), name, capitalDeployed: capital, notes, createdAt: Date.now() });
+    }
+    await saveInvestors();
+    closeModal();
+    renderInvestors();
   });
 }
 
@@ -1141,6 +1625,7 @@ async function init() {
   safeStep('initTabs', initTabs);
   safeStep('initDayNav', initDayNav);
   safeStep('initCalendar', initCalendar);
+  safeStep('initDayNotes', initDayNotes);
   safeStep('initPomodoro', initPomodoro);
 
   safeStep('add-task-btn listener', () => {
@@ -1149,13 +1634,24 @@ async function init() {
   safeStep('add-habit-btn listener', () => {
     document.getElementById('add-habit-btn').addEventListener('click', openHabitModal);
   });
+  safeStep('add-deal-btn listener', () => {
+    document.getElementById('add-deal-btn').addEventListener('click', () => openDealModal(null));
+  });
+  safeStep('add-investor-btn listener', () => {
+    document.getElementById('add-investor-btn').addEventListener('click', () => openInvestorModal(null));
+  });
 
   safeStep('renderHeader (post-load)', renderHeader);
   safeStep('renderTasks', renderTasks);
   safeStep('renderStats', renderStats);
+  safeStep('renderDeadlines', renderDeadlines);
   safeStep('renderCalendar', renderCalendar);
   safeStep('renderExpenses', renderExpenses);
+  safeStep('renderIncomeSidebar', renderIncomeSidebar);
   safeStep('renderCashTracker', renderCashTracker);
+  safeStep('renderDayNotes', renderDayNotes);
+  safeStep('renderDeals', renderDeals);
+  safeStep('renderInvestors', renderInvestors);
   safeStep('renderHabits', renderHabits);
 
   setInterval(() => safeStep('tickClock', tickClock), 1000);

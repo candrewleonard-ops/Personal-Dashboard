@@ -37,6 +37,14 @@
           <span class="tab-icon">&#128197;</span>
           <span>Calendar</span>
         </button>
+        <button class="tab" data-tab="deals">
+          <span class="tab-icon">&#9878;</span>
+          <span>Deal Pipeline</span>
+        </button>
+        <button class="tab" data-tab="investors">
+          <span class="tab-icon">&#9830;</span>
+          <span>Investors</span>
+        </button>
         <button class="tab" data-tab="focus">
           <span class="tab-icon">&#9733;</span>
           <span>Focus &amp; Habits</span>
@@ -67,7 +75,7 @@
           </div>
         </header>
 
-        <div class="grid">
+        <div class="grid dash-grid">
           <div class="card tasks-card">
             <div class="card-head">
               <h2>Tasks</h2>
@@ -109,6 +117,14 @@
               </div>
               <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             </div>
+          </div>
+
+          <div class="card deadlines-card">
+            <div class="card-head">
+              <h2>Upcoming (7 days)</h2>
+            </div>
+            <ul class="deadline-list" id="deadline-list"></ul>
+            <div class="empty-state" id="deadline-empty">All clear for the next 7 days.</div>
           </div>
         </div>
       </section>
@@ -164,6 +180,18 @@
               </div>
             </div>
 
+            <!-- Income -->
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Income</h3>
+                <button class="add-btn small" id="add-income-btn" title="Add income">+</button>
+              </div>
+              <ul class="expense-list income-list" id="income-list"></ul>
+              <div class="empty-state small" id="income-empty">No deposits this day.</div>
+            </div>
+
+            <div class="panel-divider"></div>
+
             <!-- Expenses -->
             <div class="panel-section">
               <div class="panel-section-head">
@@ -175,6 +203,16 @@
             </div>
 
             <!-- Divider -->
+            <div class="panel-divider"></div>
+
+            <!-- Daily Notes -->
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Notes</h3>
+              </div>
+              <textarea class="day-notes" id="day-notes" rows="3" placeholder="Meeting notes, ideas, updates..."></textarea>
+            </div>
+
             <div class="panel-divider"></div>
 
             <!-- To-dos -->
@@ -191,6 +229,54 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- =================== DEAL PIPELINE =================== -->
+      <section class="page" id="page-deals">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Your pipeline</div>
+            <h1 class="headline">Deal Pipeline</h1>
+            <div class="subline">Drag deals through stages from lead to closed.</div>
+          </div>
+          <button class="add-btn big" id="add-deal-btn">+ New Deal</button>
+        </header>
+        <div class="kanban" id="kanban">
+          <div class="kanban-col" data-stage="lead">
+            <div class="kanban-col-head">Lead</div>
+            <div class="kanban-cards" id="kanban-lead"></div>
+          </div>
+          <div class="kanban-col" data-stage="under_contract">
+            <div class="kanban-col-head">Under Contract</div>
+            <div class="kanban-cards" id="kanban-under_contract"></div>
+          </div>
+          <div class="kanban-col" data-stage="due_diligence">
+            <div class="kanban-col-head">Due Diligence</div>
+            <div class="kanban-cards" id="kanban-due_diligence"></div>
+          </div>
+          <div class="kanban-col" data-stage="closing">
+            <div class="kanban-col-head">Closing</div>
+            <div class="kanban-cards" id="kanban-closing"></div>
+          </div>
+          <div class="kanban-col" data-stage="closed">
+            <div class="kanban-col-head">Closed</div>
+            <div class="kanban-cards" id="kanban-closed"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== INVESTORS =================== -->
+      <section class="page" id="page-investors">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Capital partners</div>
+            <h1 class="headline">Investor Dashboard</h1>
+            <div class="subline">Track capital deployed, returns paid, and payment history.</div>
+          </div>
+          <button class="add-btn big" id="add-investor-btn">+ Add Investor</button>
+        </header>
+        <div class="investor-grid" id="investor-grid"></div>
+        <div class="empty-state big" id="investor-empty">No investors yet. Click + to add one.</div>
       </section>
 
       <!-- =================== FOCUS & HABITS =================== -->
