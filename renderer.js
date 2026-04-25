@@ -138,6 +138,8 @@ function initTabs() {
         renderDeals();
       } else if (target === 'investors') {
         renderInvestors();
+      } else if (target === 'focus') {
+        renderHabits();
       }
     });
   });
@@ -180,16 +182,17 @@ function initDayNav() {
     renderHeader();
     renderTasks();
     renderStats();
+    renderHabits();
   });
 
   document.addEventListener('keydown', (e) => {
-    if (state.activeTab !== 'dashboard') return;
+    if (state.activeTab !== 'dashboard' && state.activeTab !== 'focus') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.key === 'ArrowLeft')  shiftDay(-1);
     if (e.key === 'ArrowRight') shiftDay(+1);
     if (e.key === 't' || e.key === 'T') {
       state.currentDate = new Date();
-      renderHeader(); renderTasks(); renderStats();
+      renderHeader(); renderTasks(); renderStats(); renderHabits();
     }
   });
 }
@@ -201,6 +204,7 @@ function shiftDay(delta) {
   renderHeader();
   renderTasks();
   renderStats();
+  renderHabits();
 }
 
 /* ------------------- TASKS ------------------- */
@@ -1519,7 +1523,45 @@ function initPomodoro() {
 }
 
 /* ------------------- HABITS ------------------- */
+function migrateHabitHistory() {
+  // Convert legacy habits (single lastChecked field) into history-array form.
+  state.habits.habits.forEach(h => {
+    if (!Array.isArray(h.history)) {
+      h.history = h.lastChecked ? [h.lastChecked] : [];
+    }
+  });
+}
+
+function calcStreak(habit) {
+  const set = new Set(habit.history || []);
+  if (set.size === 0) return 0;
+  let streak = 0;
+  const d = new Date();
+  while (set.has(dateKey(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function focusDateLabel() {
+  const d = state.currentDate;
+  const now = new Date();
+  if (sameDay(d, now)) return 'today';
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  if (sameDay(d, y)) return 'yesterday';
+  const t = new Date(now); t.setDate(t.getDate() + 1);
+  if (sameDay(d, t)) return 'tomorrow';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function renderFocusHeader() {
+  const sub = document.getElementById('focus-subline');
+  if (sub) sub.textContent = `Tracking habits for ${focusDateLabel()}.`;
+}
+
 function renderHabits() {
+  renderFocusHeader();
   const list = document.getElementById('habit-list');
   const empty = document.getElementById('habit-empty');
   list.innerHTML = '';
@@ -1530,20 +1572,20 @@ function renderHabits() {
   }
   empty.style.display = 'none';
 
-  const today = todayKey();
+  const dKey = dateKey(state.currentDate);
+  const dayLabel = focusDateLabel();
 
   state.habits.habits.forEach(habit => {
+    if (!Array.isArray(habit.history)) habit.history = [];
     const li = document.createElement('li');
     li.className = 'habit-item';
 
-    const checkedToday = habit.lastChecked === today;
+    const checkedThatDay = habit.history.includes(dKey);
 
     const check = document.createElement('button');
-    check.className = 'habit-check' + (checkedToday ? ' checked' : '');
-    check.title = checkedToday ? 'Checked in' : 'Mark done today';
-    check.addEventListener('click', async () => {
-      await toggleHabit(habit);
-    });
+    check.className = 'habit-check' + (checkedThatDay ? ' checked' : '');
+    check.title = checkedThatDay ? `Checked in for ${dayLabel}` : `Check in for ${dayLabel}`;
+    check.addEventListener('click', async () => { await toggleHabit(habit); });
     li.appendChild(check);
 
     const info = document.createElement('div');
@@ -1554,13 +1596,15 @@ function renderHabits() {
     info.appendChild(name);
     const sub = document.createElement('div');
     sub.className = 'habit-sub';
-    sub.textContent = checkedToday ? 'Done today — keep it rolling' : 'Tap the circle to check in';
+    sub.textContent = checkedThatDay
+      ? `Checked in for ${dayLabel} — keep it rolling`
+      : `Tap to check in for ${dayLabel}`;
     info.appendChild(sub);
     li.appendChild(info);
 
     const badge = document.createElement('div');
     badge.className = 'streak-badge';
-    badge.textContent = `${habit.streak || 0}`;
+    badge.textContent = `${calcStreak(habit)}`;
     li.appendChild(badge);
 
     const del = document.createElement('button');
@@ -1581,22 +1625,28 @@ function renderHabits() {
 }
 
 async function toggleHabit(habit) {
-  const today = todayKey();
-  if (habit.lastChecked === today) {
-    // Un-check today
-    habit.streak = Math.max(0, (habit.streak || 1) - 1);
-    habit.lastChecked = null;
-  } else {
-    // Check in: if last was yesterday, increment; else reset to 1
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yKey = dateKey(yesterday);
-    if (habit.lastChecked === yKey) habit.streak = (habit.streak || 0) + 1;
-    else habit.streak = 1;
-    habit.lastChecked = today;
-  }
+  if (!Array.isArray(habit.history)) habit.history = [];
+  const dKey = dateKey(state.currentDate);
+  const idx = habit.history.indexOf(dKey);
+  if (idx >= 0) habit.history.splice(idx, 1);
+  else habit.history.push(dKey);
+  habit.streak = calcStreak(habit);
+  habit.lastChecked = habit.history.length ? [...habit.history].sort().pop() : null;
   await saveHabits();
   renderHabits();
   renderStats();
+}
+
+function initFocusDayNav() {
+  const prev = document.getElementById('focus-prev');
+  const next = document.getElementById('focus-next');
+  const today = document.getElementById('focus-today');
+  if (prev) prev.addEventListener('click', () => shiftDay(-1));
+  if (next) next.addEventListener('click', () => shiftDay(+1));
+  if (today) today.addEventListener('click', () => {
+    state.currentDate = new Date();
+    renderHeader(); renderTasks(); renderStats(); renderHabits();
+  });
 }
 
 function openHabitModal() {
@@ -1611,6 +1661,7 @@ function openHabitModal() {
     state.habits.habits.push({
       id: uid(),
       name,
+      history: [],
       streak: 0,
       lastChecked: null,
       createdAt: Date.now()
@@ -1622,18 +1673,8 @@ function openHabitModal() {
   });
 }
 
-/* Auto-break streaks when a day is skipped */
-function reconcileHabitStreaks() {
-  const today = new Date();
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  const tKey = dateKey(today);
-  const yKey = dateKey(yesterday);
-  state.habits.habits.forEach(h => {
-    if (h.lastChecked && h.lastChecked !== tKey && h.lastChecked !== yKey) {
-      h.streak = 0;
-    }
-  });
-}
+/* History-based habits: streak is auto-calculated from history every render,
+ * so no manual reconciliation needed when a day is skipped. */
 
 /* ------------------- INIT ------------------- */
 // Defensive wrapper: run a step, log any failure, keep going. Prevents one
@@ -1663,11 +1704,12 @@ async function init() {
     state.habits = state.habits || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
   }
 
-  safeStep('reconcileHabitStreaks', reconcileHabitStreaks);
+  safeStep('migrateHabitHistory', migrateHabitHistory);
   try { await saveHabits(); } catch (err) { console.error('[init:saveHabits]', err); }
 
   safeStep('initTabs', initTabs);
   safeStep('initDayNav', initDayNav);
+  safeStep('initFocusDayNav', initFocusDayNav);
   safeStep('initCalendar', initCalendar);
   safeStep('initDayNotes', initDayNotes);
   safeStep('initPomodoro', initPomodoro);
