@@ -640,12 +640,11 @@ function generateRecurring(expense, startDateStr, months) {
 function getPoolBalance(pool) {
   const base = (state.cashflow.pools && state.cashflow.pools[pool]) || 0;
   const anchor = state.calendarMonth;
-  const viewYear = anchor.getFullYear();
-  const viewMonth = anchor.getMonth();
+  const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  const cutoff = dateKey(lastDay);
   let paidExp = 0, allExp = 0, recvInc = 0, allInc = 0;
   for (const [key, exps] of Object.entries(state.expenses)) {
-    const d = new Date(key + 'T12:00:00');
-    if (d.getFullYear() !== viewYear || d.getMonth() !== viewMonth) continue;
+    if (key > cutoff) continue;
     for (const e of exps) {
       if (expPool(e) !== pool) continue;
       allExp += e.amount || 0;
@@ -653,8 +652,7 @@ function getPoolBalance(pool) {
     }
   }
   for (const [key, incs] of Object.entries(state.income)) {
-    const d = new Date(key + 'T12:00:00');
-    if (d.getFullYear() !== viewYear || d.getMonth() !== viewMonth) continue;
+    if (key > cutoff) continue;
     for (const inc of incs) {
       if ((inc.pool || 'personal') !== pool) continue;
       allInc += inc.amount || 0;
