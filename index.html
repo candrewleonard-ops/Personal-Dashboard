@@ -137,19 +137,58 @@
             <div class="calendar-grid" id="calendar-grid"></div>
           </div>
 
-          <div class="card day-tasks-card">
+          <div class="card day-panel-card">
+            <!-- Day header -->
             <div class="card-head">
               <div>
                 <h2 id="day-tasks-title">Today</h2>
                 <div class="day-tasks-sub" id="day-tasks-sub">&nbsp;</div>
               </div>
-              <div class="card-head-right">
-                <div class="counter" id="day-tasks-counter">0 / 0</div>
-                <button class="add-btn" id="add-day-task-btn" title="Add task">+</button>
+            </div>
+
+            <!-- Cash tracker -->
+            <div class="cash-tracker">
+              <div class="cash-row">
+                <div class="cash-metric">
+                  <div class="cash-label">Cash On Hand</div>
+                  <div class="cash-value editable" id="cash-on-hand" title="Click to set starting balance">$0</div>
+                </div>
+                <div class="cash-metric">
+                  <div class="cash-label">Projected Cash</div>
+                  <div class="cash-value" id="cash-projected">$0</div>
+                </div>
+                <div class="cash-metric">
+                  <div class="cash-label">Cash Needed</div>
+                  <div class="cash-value warn" id="cash-needed">$0</div>
+                </div>
               </div>
             </div>
-            <ul class="task-list" id="day-task-list"></ul>
-            <div class="empty-state" id="day-task-empty">No to&#8209;dos for this day. Tap + to add one.</div>
+
+            <!-- Expenses -->
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Expenses</h3>
+                <button class="add-btn small" id="add-expense-btn" title="Add expense">+</button>
+              </div>
+              <ul class="expense-list" id="expense-list"></ul>
+              <div class="empty-state small" id="expense-empty">No expenses. Tap + to add one.</div>
+            </div>
+
+            <!-- Divider -->
+            <div class="panel-divider"></div>
+
+            <!-- To-dos -->
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>To&#8209;dos</h3>
+                <div class="card-head-right">
+                  <div class="counter" id="day-tasks-counter">0 / 0</div>
+                  <button class="add-btn small" id="add-day-task-btn" title="Add task">+</button>
+                </div>
+              </div>
+              <ul class="task-list" id="day-task-list"></ul>
+              <div class="empty-state small" id="day-task-empty">No to&#8209;dos. Tap + to add one.</div>
+            </div>
           </div>
         </div>
       </section>

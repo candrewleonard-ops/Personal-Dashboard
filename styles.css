@@ -561,12 +561,191 @@ input:focus, textarea:focus, select:focus {
   color: var(--success);
 }
 
-.day-tasks-card .card-head { align-items: flex-start; }
+/* Day panel (right sidebar) */
+.day-panel-card {
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+.day-panel-card::-webkit-scrollbar { width: 8px; }
+.day-panel-card::-webkit-scrollbar-thumb { background: var(--brand-navy-3); border-radius: 8px; }
+.day-panel-card .card-head { align-items: flex-start; }
 .day-tasks-sub {
   font-size: 12px;
   color: var(--text-dim);
   margin-top: 2px;
   font-weight: 600;
+}
+
+/* Cash tracker */
+.cash-tracker {
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.cash-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.cash-metric { text-align: center; }
+.cash-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.cash-value {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.cash-value.editable {
+  cursor: pointer;
+  border-bottom: 1px dashed var(--text-muted);
+  display: inline-block;
+}
+.cash-value.editable:hover { border-color: var(--accent); color: var(--accent-2); }
+.cash-value.warn { color: var(--warn); }
+.cash-value.negative { color: var(--danger); }
+
+/* Panel sections */
+.panel-section { margin-bottom: 6px; }
+.panel-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.panel-section-head h3 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.panel-divider {
+  border-top: 1px solid var(--brand-navy-line);
+  margin: 14px 0;
+}
+.add-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+.empty-state.small { padding: 12px 6px 2px; font-size: 12px; }
+
+/* Expense list */
+.expense-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.expense-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--brand-navy-line);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  position: relative;
+}
+.expense-item:hover { background: rgba(255, 255, 255, 0.04); }
+.expense-item.paid { opacity: 0.55; }
+.expense-item.paid .expense-label { text-decoration: line-through; }
+
+.expense-check {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--text-muted);
+  border-radius: 5px;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.15s;
+}
+.expense-check:hover { border-color: var(--success); }
+.expense-item.paid .expense-check {
+  background: var(--success);
+  border-color: var(--success);
+}
+.expense-item.paid .expense-check::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.expense-info { flex: 1; min-width: 0; }
+.expense-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.expense-notes {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.expense-amount {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--danger);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.expense-item.paid .expense-amount { color: var(--text-muted); }
+.expense-cat {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.expense-cat.investor_debt { background: rgba(255, 77, 109, 0.15); color: var(--danger); }
+.expense-cat.monthly       { background: rgba(255, 181, 71, 0.15); color: var(--warn); }
+.expense-cat.software      { background: rgba(77, 163, 255, 0.15); color: var(--accent); }
+.expense-cat.misc          { background: rgba(255, 255, 255, 0.08); color: var(--text-dim); }
+.expense-recurring-pip {
+  font-size: 10px;
+  color: var(--accent-2);
+  margin-left: 4px;
+}
+
+/* Calendar red warning day */
+.cal-cell.cash-warning {
+  border-color: var(--danger);
+  box-shadow: inset 0 0 0 1px rgba(255, 77, 109, 0.4);
+}
+.cal-cell.cash-warning .cal-day-num { color: var(--danger); }
+.cal-expense-total {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--danger);
+  margin-top: auto;
 }
 
 /* ============================= STATS ============================= */

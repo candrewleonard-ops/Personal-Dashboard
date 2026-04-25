@@ -8,13 +8,17 @@ const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const FILES = {
   tasks: path.join(DATA_DIR, 'tasks.json'),
   habits: path.join(DATA_DIR, 'habits.json'),
-  settings: path.join(DATA_DIR, 'settings.json')
+  settings: path.join(DATA_DIR, 'settings.json'),
+  expenses: path.join(DATA_DIR, 'expenses.json'),
+  cashflow: path.join(DATA_DIR, 'cashflow.json')
 };
 
 const DEFAULTS = {
   tasks: {},
   habits: { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } },
-  settings: { theme: 'dark' }
+  settings: { theme: 'dark' },
+  expenses: {},
+  cashflow: { startingBalance: 0, startingDate: null }
 };
 
 function ensureDataDir() {

@@ -16,6 +16,15 @@ const state = {
     habits: [],              // { id, name, streak, lastChecked, history: [] }
     pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 }
   },
+  /* Expense schema per day key:
+   * { 'YYYY-MM-DD': [ { id, label, notes, amount, category, paid, recurring, recurringGroupId, createdAt } ] }
+   * Categories: 'investor_debt' | 'monthly' | 'software' | 'misc'
+   * To bulk-add from a contract screenshot, create entries like:
+   *   { label:'Investor - Smith', notes:'10% interest, 12mo term', amount:5000,
+   *     category:'investor_debt', paid:false, recurring:true }
+   * and place them under the correct 'YYYY-MM-DD' key. */
+  expenses: {},
+  cashflow: { startingBalance: 0, startingDate: null },
   currentDate: new Date(),   // currently-viewed day on Dashboard
   calendarMonth: new Date(), // anchors the month shown on Calendar
   selectedDate: new Date(),  // day highlighted in the Calendar side panel
@@ -74,8 +83,10 @@ function fmtMoney(n) {
 
 /* ------------------- STORAGE ------------------- */
 async function loadAll() {
-  state.tasks  = (await bridge.store.get('tasks'))  || {};
-  state.habits = (await bridge.store.get('habits')) || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
+  state.tasks    = (await bridge.store.get('tasks'))    || {};
+  state.habits   = (await bridge.store.get('habits'))   || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
+  state.expenses = (await bridge.store.get('expenses')) || {};
+  state.cashflow = (await bridge.store.get('cashflow')) || { startingBalance: 0, startingDate: null };
 
   // Reset pomodoro counter at date change
   const t = todayKey();
@@ -87,8 +98,10 @@ async function loadAll() {
   }
 }
 
-async function saveTasks()  { await bridge.store.set('tasks',  state.tasks); }
-async function saveHabits() { await bridge.store.set('habits', state.habits); }
+async function saveTasks()    { await bridge.store.set('tasks',    state.tasks); }
+async function saveHabits()   { await bridge.store.set('habits',   state.habits); }
+async function saveExpenses() { await bridge.store.set('expenses', state.expenses); }
+async function saveCashflow() { await bridge.store.set('cashflow', state.cashflow); }
 
 /* ------------------- TABS ------------------- */
 function initTabs() {
@@ -321,6 +334,10 @@ function initCalendar() {
   document.getElementById('add-day-task-btn').addEventListener('click', () => {
     openTaskModalFor(null, state.selectedDate, afterCalendarTaskChange);
   });
+  document.getElementById('add-expense-btn').addEventListener('click', () => {
+    openExpenseModal(null, state.selectedDate);
+  });
+  document.getElementById('cash-on-hand').addEventListener('click', openSetBalanceModal);
 
   document.addEventListener('keydown', (e) => {
     if (state.activeTab !== 'calendar') return;
@@ -392,9 +409,16 @@ function renderCalendar() {
 
     const key = dateKey(d);
     const dayTasks = state.tasks[key] || [];
+    const dayExp = state.expenses[key] || [];
+
+    // Red-day warning: projected cash goes negative
+    if (dayExp.length > 0 && state.cashflow.startingDate) {
+      const bal = getRunningBalance(d);
+      if (bal.projected < 0) cell.classList.add('cash-warning');
+    }
+
     if (dayTasks.length > 0) {
       const done = dayTasks.filter(t => t.done).length;
-
       const dots = document.createElement('div');
       dots.className = 'cal-dots';
       const max = Math.min(dayTasks.length, 8);
@@ -414,6 +438,14 @@ function renderCalendar() {
       cell.appendChild(count);
     }
 
+    if (dayExp.length > 0) {
+      const total = dayExp.reduce((s, e) => s + (e.amount || 0), 0);
+      const expLabel = document.createElement('div');
+      expLabel.className = 'cal-expense-total';
+      expLabel.textContent = '-' + fmtMoney(total);
+      cell.appendChild(expLabel);
+    }
+
     cell.addEventListener('click', () => {
       state.selectedDate = new Date(d);
       // If user clicked an out-of-month day, jump the month view to follow
@@ -427,6 +459,8 @@ function renderCalendar() {
   }
 
   renderCalendarTasks();
+  renderExpenses();
+  renderCashTracker();
 }
 
 function renderCalendarTasks() {
@@ -517,6 +551,270 @@ function renderCalendarTasks() {
     li.appendChild(delBtn);
 
     list.appendChild(li);
+  });
+}
+
+/* ------------------- EXPENSES & CASHFLOW ------------------- */
+function getDayExpenses(date) {
+  const d = date || state.selectedDate;
+  const key = dateKey(d);
+  if (!state.expenses[key]) state.expenses[key] = [];
+  return state.expenses[key];
+}
+
+function nextRecurringDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dayOfMonth = d.getDate();
+  if (dayOfMonth >= 29) {
+    d.setDate(d.getDate() + 30);
+  } else {
+    d.setMonth(d.getMonth() + 1);
+  }
+  return dateKey(d);
+}
+
+function generateRecurring(expense, startDateStr) {
+  const groupId = expense.recurringGroupId || expense.id;
+  let nextDate = startDateStr;
+  for (let m = 0; m < 6; m++) {
+    nextDate = nextRecurringDate(nextDate);
+    if (!state.expenses[nextDate]) state.expenses[nextDate] = [];
+    const alreadyExists = state.expenses[nextDate].some(
+      e => e.recurringGroupId === groupId && e.label === expense.label
+    );
+    if (!alreadyExists) {
+      state.expenses[nextDate].push({
+        id: uid(),
+        label: expense.label,
+        notes: expense.notes,
+        amount: expense.amount,
+        category: expense.category,
+        paid: false,
+        recurring: true,
+        recurringGroupId: groupId,
+        createdAt: Date.now()
+      });
+    }
+  }
+}
+
+function getRunningBalance(targetDate) {
+  const cf = state.cashflow;
+  if (!cf.startingDate) return { cashOnHand: 0, projected: 0 };
+  const start = new Date(cf.startingDate + 'T12:00:00');
+  const end = new Date(dateKey(targetDate) + 'T12:00:00');
+  let paidTotal = 0;
+  let allTotal = 0;
+  const d = new Date(start);
+  while (d <= end) {
+    const key = dateKey(d);
+    const dayExp = state.expenses[key] || [];
+    for (const e of dayExp) {
+      allTotal += e.amount || 0;
+      if (e.paid) paidTotal += e.amount || 0;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return {
+    cashOnHand: cf.startingBalance - paidTotal,
+    projected: cf.startingBalance - allTotal
+  };
+}
+
+function getDayCashNeeded(date) {
+  const exps = state.expenses[dateKey(date)] || [];
+  return exps.filter(e => !e.paid).reduce((sum, e) => sum + (e.amount || 0), 0);
+}
+
+function renderCashTracker() {
+  const d = state.selectedDate;
+  const bal = getRunningBalance(d);
+  const needed = getDayCashNeeded(d);
+
+  const cohEl = document.getElementById('cash-on-hand');
+  const projEl = document.getElementById('cash-projected');
+  const needEl = document.getElementById('cash-needed');
+
+  cohEl.textContent = fmtMoney(bal.cashOnHand);
+  projEl.textContent = fmtMoney(bal.projected);
+  projEl.className = 'cash-value' + (bal.projected < 0 ? ' negative' : '');
+  needEl.textContent = fmtMoney(needed);
+  needEl.className = 'cash-value' + (needed > 0 ? ' warn' : '');
+}
+
+function renderExpenses() {
+  const d = state.selectedDate;
+  const list = document.getElementById('expense-list');
+  const empty = document.getElementById('expense-empty');
+  const expenses = getDayExpenses(d);
+
+  list.innerHTML = '';
+  empty.style.display = expenses.length === 0 ? 'block' : 'none';
+
+  expenses.forEach(exp => {
+    const li = document.createElement('li');
+    li.className = 'expense-item' + (exp.paid ? ' paid' : '');
+
+    const cb = document.createElement('button');
+    cb.className = 'expense-check';
+    cb.title = exp.paid ? 'Paid' : 'Mark as paid';
+    cb.addEventListener('click', async () => {
+      exp.paid = !exp.paid;
+      await saveExpenses();
+      renderExpenses();
+      renderCashTracker();
+      renderCalendar();
+    });
+    li.appendChild(cb);
+
+    const info = document.createElement('div');
+    info.className = 'expense-info';
+    const label = document.createElement('div');
+    label.className = 'expense-label';
+    label.textContent = exp.label;
+    if (exp.recurring) {
+      const pip = document.createElement('span');
+      pip.className = 'expense-recurring-pip';
+      pip.textContent = '↻';
+      label.appendChild(pip);
+    }
+    info.appendChild(label);
+    if (exp.notes) {
+      const notes = document.createElement('div');
+      notes.className = 'expense-notes';
+      notes.textContent = exp.notes;
+      info.appendChild(notes);
+    }
+    li.appendChild(info);
+
+    if (exp.category) {
+      const cat = document.createElement('span');
+      cat.className = 'expense-cat ' + exp.category;
+      const catLabels = { investor_debt: 'Debt', monthly: 'Monthly', software: 'SaaS', misc: 'Misc' };
+      cat.textContent = catLabels[exp.category] || exp.category;
+      li.appendChild(cat);
+    }
+
+    const amt = document.createElement('div');
+    amt.className = 'expense-amount';
+    amt.textContent = fmtMoney(exp.amount);
+    li.appendChild(amt);
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'task-icon-btn';
+    editBtn.title = 'Edit';
+    editBtn.innerHTML = '&#9998;';
+    editBtn.addEventListener('click', () => openExpenseModal(exp, d));
+    li.appendChild(editBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'task-icon-btn danger';
+    delBtn.title = 'Delete';
+    delBtn.innerHTML = '&times;';
+    delBtn.addEventListener('click', async () => {
+      const dayExp = getDayExpenses(d);
+      const i = dayExp.findIndex(e => e.id === exp.id);
+      if (i >= 0) dayExp.splice(i, 1);
+      await saveExpenses();
+      renderExpenses();
+      renderCashTracker();
+      renderCalendar();
+    });
+    li.appendChild(delBtn);
+
+    list.appendChild(li);
+  });
+}
+
+function openExpenseModal(existing, date) {
+  const isEdit = !!existing;
+  const niceDate = date.toLocaleDateString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric'
+  });
+  openModal(isEdit ? `Edit Expense — ${niceDate}` : `Add Expense — ${niceDate}`, `
+    <div>
+      <label>Label</label>
+      <input type="text" id="exp-label" placeholder="e.g. Investor payment - Smith"
+             value="${existing ? escapeAttr(existing.label) : ''}" maxlength="120" />
+    </div>
+    <div>
+      <label>Amount ($)</label>
+      <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"
+             value="${existing ? existing.amount : ''}" />
+    </div>
+    <div>
+      <label>Category</label>
+      <select id="exp-category">
+        <option value="investor_debt" ${existing && existing.category === 'investor_debt' ? 'selected' : ''}>Investor Debt</option>
+        <option value="monthly"       ${existing && existing.category === 'monthly' ? 'selected' : ''}>Monthly Payment</option>
+        <option value="software"      ${existing && existing.category === 'software' ? 'selected' : ''}>Software / SaaS</option>
+        <option value="misc"          ${!existing || existing.category === 'misc' ? 'selected' : ''}>Misc</option>
+      </select>
+    </div>
+    <div>
+      <label>Notes</label>
+      <textarea id="exp-notes" rows="2" placeholder="Contract details, account numbers, etc.">${existing ? escapeAttr(existing.notes || '') : ''}</textarea>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <input type="checkbox" id="exp-recurring" style="width:auto;" ${existing && existing.recurring ? 'checked' : ''} />
+      <label for="exp-recurring" style="margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);">Recurring monthly</label>
+    </div>
+  `, async () => {
+    const label = document.getElementById('exp-label').value.trim();
+    const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+    const category = document.getElementById('exp-category').value;
+    const notes = document.getElementById('exp-notes').value.trim();
+    const recurring = document.getElementById('exp-recurring').checked;
+    if (!label || amount <= 0) return;
+
+    const dayExp = getDayExpenses(date);
+    if (isEdit) {
+      existing.label = label;
+      existing.amount = amount;
+      existing.category = category;
+      existing.notes = notes;
+      existing.recurring = recurring;
+    } else {
+      const exp = {
+        id: uid(), label, notes, amount, category,
+        paid: false, recurring,
+        recurringGroupId: null,
+        createdAt: Date.now()
+      };
+      exp.recurringGroupId = exp.id;
+      dayExp.push(exp);
+      if (recurring) generateRecurring(exp, dateKey(date));
+    }
+    await saveExpenses();
+    closeModal();
+    renderExpenses();
+    renderCashTracker();
+    renderCalendar();
+  });
+}
+
+function openSetBalanceModal() {
+  const cf = state.cashflow;
+  openModal('Set Starting Cash Balance', `
+    <div>
+      <label>Starting Balance ($)</label>
+      <input type="number" id="bal-amount" placeholder="20000" min="0" step="0.01"
+             value="${cf.startingBalance || ''}" />
+    </div>
+    <div>
+      <label>As of Date</label>
+      <input type="date" id="bal-date" value="${cf.startingDate || dateKey(new Date())}" />
+    </div>
+  `, async () => {
+    const amount = parseFloat(document.getElementById('bal-amount').value) || 0;
+    const asOf = document.getElementById('bal-date').value;
+    if (!asOf) return;
+    state.cashflow.startingBalance = amount;
+    state.cashflow.startingDate = asOf;
+    await saveCashflow();
+    closeModal();
+    renderCashTracker();
+    renderCalendar();
   });
 }
 
@@ -856,6 +1154,8 @@ async function init() {
   safeStep('renderTasks', renderTasks);
   safeStep('renderStats', renderStats);
   safeStep('renderCalendar', renderCalendar);
+  safeStep('renderExpenses', renderExpenses);
+  safeStep('renderCashTracker', renderCashTracker);
   safeStep('renderHabits', renderHabits);
 
   setInterval(() => safeStep('tickClock', tickClock), 1000);
