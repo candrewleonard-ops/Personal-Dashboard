@@ -146,6 +146,12 @@
 
         <div class="grid calendar-layout">
           <div class="card calendar-card">
+            <div class="cal-filters" id="cal-filters">
+              <label><input type="checkbox" checked data-pool="personal" /> Personal</label>
+              <label><input type="checkbox" checked data-pool="business" /> Business</label>
+              <label><input type="checkbox" checked data-pool="flip_payments" /> Flip Payments</label>
+              <label><input type="checkbox" checked data-pool="renovation" /> Renovation</label>
+            </div>
             <div class="calendar-weekdays">
               <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
               <div>Thu</div><div>Fri</div><div>Sat</div>
@@ -162,19 +168,33 @@
               </div>
             </div>
 
-            <!-- Cash tracker -->
+            <!-- Cash reserves (4 pools) -->
             <div class="cash-tracker">
-              <div class="cash-row">
-                <div class="cash-metric">
-                  <div class="cash-label">Cash On Hand</div>
-                  <div class="cash-value editable" id="cash-on-hand" title="Click to set starting balance">$0</div>
+              <div class="pool-grid">
+                <div class="pool-item">
+                  <div class="cash-label">Personal</div>
+                  <div class="cash-value editable pool-bal" data-pool="personal" title="Click to set reserve">$0</div>
                 </div>
+                <div class="pool-item">
+                  <div class="cash-label">Business</div>
+                  <div class="cash-value editable pool-bal" data-pool="business" title="Click to set reserve">$0</div>
+                </div>
+                <div class="pool-item">
+                  <div class="cash-label">Flip Payments</div>
+                  <div class="cash-value editable pool-bal" data-pool="flip_payments" title="Click to set reserve">$0</div>
+                </div>
+                <div class="pool-item">
+                  <div class="cash-label">Renovation</div>
+                  <div class="cash-value editable pool-bal" data-pool="renovation" title="Click to set reserve">$0</div>
+                </div>
+              </div>
+              <div class="cash-summary">
                 <div class="cash-metric">
-                  <div class="cash-label">Projected Cash</div>
+                  <div class="cash-label">Projected Total</div>
                   <div class="cash-value" id="cash-projected">$0</div>
                 </div>
                 <div class="cash-metric">
-                  <div class="cash-label">Cash Needed</div>
+                  <div class="cash-label">Cash Needed Today</div>
                   <div class="cash-value warn" id="cash-needed">$0</div>
                 </div>
               </div>

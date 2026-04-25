@@ -584,11 +584,60 @@ input:focus, textarea:focus, select:focus {
   margin-bottom: 16px;
   background: rgba(255, 255, 255, 0.02);
 }
+.pool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pool-item { text-align: center; padding: 6px; background: rgba(255,255,255,0.02); border-radius: 6px; }
+.cash-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--brand-navy-line);
+  padding-top: 10px;
+}
 .cash-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
 }
+
+/* Calendar pool filters */
+.cal-filters {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--brand-navy-line);
+}
+.cal-filters label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.cal-filters input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+
+/* Pool badge on expense/income items */
+.pool-badge {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pool-badge.personal     { background: rgba(122, 208, 255, 0.15); color: var(--accent-2); }
+.pool-badge.business     { background: rgba(245, 193, 95, 0.15);  color: var(--gold); }
+.pool-badge.flip_payments { background: rgba(255, 122, 60, 0.15); color: var(--fire); }
+.pool-badge.renovation   { background: rgba(46, 213, 115, 0.15);  color: var(--success); }
 .cash-metric { text-align: center; }
 .cash-label {
   font-size: 9px;

@@ -25,7 +25,8 @@ const state = {
    * and place them under the correct 'YYYY-MM-DD' key. */
   expenses: {},
   income: {},
-  cashflow: { startingBalance: 0, startingDate: null },
+  cashflow: { pools: { personal: 0, business: 0, flip_payments: 0, renovation: 0 } },
+  calendarFilters: { personal: true, business: true, flip_payments: true, renovation: true },
   notes: {},
   deals: [],
   investors: [],
@@ -91,7 +92,8 @@ async function loadAll() {
   state.habits   = (await bridge.store.get('habits'))   || { habits: [], pomodoro: { sessionsToday: 0, lastDate: null, totalMinutes: 0 } };
   state.expenses  = (await bridge.store.get('expenses'))  || {};
   state.income    = (await bridge.store.get('income'))    || {};
-  state.cashflow  = (await bridge.store.get('cashflow'))  || { startingBalance: 0, startingDate: null };
+  state.cashflow  = (await bridge.store.get('cashflow'))  || { pools: { personal: 0, business: 0, flip_payments: 0, renovation: 0 } };
+  if (!state.cashflow.pools) state.cashflow.pools = { personal: 0, business: 0, flip_payments: 0, renovation: 0 };
   state.notes     = (await bridge.store.get('notes'))     || {};
   state.deals     = (await bridge.store.get('deals'))     || [];
   state.investors = (await bridge.store.get('investors')) || [];
@@ -357,7 +359,15 @@ function initCalendar() {
   document.getElementById('add-income-btn').addEventListener('click', () => {
     openIncomeModal(state.selectedDate);
   });
-  document.getElementById('cash-on-hand').addEventListener('click', openSetBalanceModal);
+  document.querySelectorAll('.pool-bal').forEach(el => {
+    el.addEventListener('click', () => openSetPoolBalanceModal(el.dataset.pool));
+  });
+  document.querySelectorAll('#cal-filters input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      state.calendarFilters[cb.dataset.pool] = cb.checked;
+      renderCalendar();
+    });
+  });
 
   document.addEventListener('keydown', (e) => {
     if (state.activeTab !== 'calendar') return;
@@ -431,10 +441,10 @@ function renderCalendar() {
     const dayTasks = state.tasks[key] || [];
     const dayExp = state.expenses[key] || [];
 
-    // Red-day warning: projected cash goes negative
-    if (dayExp.length > 0 && state.cashflow.startingDate) {
-      const bal = getRunningBalance(d);
-      if (bal.projected < 0) cell.classList.add('cash-warning');
+    // Red-day warning: any pool projected negative
+    if (dayExp.length > 0) {
+      const anyNeg = POOLS.some(p => getPoolBalance(p).projected < 0);
+      if (anyNeg) cell.classList.add('cash-warning');
     }
 
     if (dayTasks.length > 0) {
@@ -585,6 +595,12 @@ function renderCalendarTasks() {
   });
 }
 
+/* ------------------- POOLS & CONSTANTS ------------------- */
+const POOLS = ['personal', 'business', 'flip_payments', 'renovation'];
+const POOL_LABELS = { personal: 'Personal', business: 'Business', flip_payments: 'Flip Payments', renovation: 'Renovation' };
+
+function expPool(e) { return e.pool || e.category || 'personal'; }
+
 /* ------------------- EXPENSES & CASHFLOW ------------------- */
 function getDayExpenses(date) {
   const d = date || state.selectedDate;
@@ -595,19 +611,16 @@ function getDayExpenses(date) {
 
 function nextRecurringDate(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
-  const dayOfMonth = d.getDate();
-  if (dayOfMonth >= 29) {
-    d.setDate(d.getDate() + 30);
-  } else {
-    d.setMonth(d.getMonth() + 1);
-  }
+  if (d.getDate() >= 29) { d.setDate(d.getDate() + 30); }
+  else { d.setMonth(d.getMonth() + 1); }
   return dateKey(d);
 }
 
-function generateRecurring(expense, startDateStr) {
+function generateRecurring(expense, startDateStr, months) {
   const groupId = expense.recurringGroupId || expense.id;
+  const limit = (!months || months === 0) ? 12 : months;
   let nextDate = startDateStr;
-  for (let m = 0; m < 6; m++) {
+  for (let m = 0; m < limit; m++) {
     nextDate = nextRecurringDate(nextDate);
     if (!state.expenses[nextDate]) state.expenses[nextDate] = [];
     const alreadyExists = state.expenses[nextDate].some(
@@ -615,48 +628,39 @@ function generateRecurring(expense, startDateStr) {
     );
     if (!alreadyExists) {
       state.expenses[nextDate].push({
-        id: uid(),
-        label: expense.label,
-        notes: expense.notes,
-        amount: expense.amount,
-        category: expense.category,
-        paid: false,
-        recurring: true,
-        recurringGroupId: groupId,
-        createdAt: Date.now()
+        id: uid(), label: expense.label, notes: expense.notes,
+        amount: expense.amount, pool: expense.pool,
+        paid: false, recurring: true, recurringMonths: expense.recurringMonths,
+        recurringGroupId: groupId, createdAt: Date.now()
       });
     }
   }
 }
 
-function getRunningBalance(targetDate) {
-  const cf = state.cashflow;
-  if (!cf.startingDate) return { cashOnHand: 0, projected: 0 };
-  const start = new Date(cf.startingDate + 'T12:00:00');
-  const end = new Date(dateKey(targetDate) + 'T12:00:00');
-  let paidExpenses = 0;
-  let allExpenses = 0;
-  let receivedIncome = 0;
-  let allIncome = 0;
-  const d = new Date(start);
-  while (d <= end) {
-    const key = dateKey(d);
-    const dayExp = state.expenses[key] || [];
-    for (const e of dayExp) {
-      allExpenses += e.amount || 0;
-      if (e.paid) paidExpenses += e.amount || 0;
+function getPoolBalance(pool) {
+  const base = (state.cashflow.pools && state.cashflow.pools[pool]) || 0;
+  let paidExp = 0, allExp = 0, recvInc = 0, allInc = 0;
+  for (const exps of Object.values(state.expenses)) {
+    for (const e of exps) {
+      if (expPool(e) !== pool) continue;
+      allExp += e.amount || 0;
+      if (e.paid) paidExp += e.amount || 0;
     }
-    const dayInc = state.income[key] || [];
-    for (const inc of dayInc) {
-      allIncome += inc.amount || 0;
-      if (inc.received) receivedIncome += inc.amount || 0;
-    }
-    d.setDate(d.getDate() + 1);
   }
-  return {
-    cashOnHand: cf.startingBalance + receivedIncome - paidExpenses,
-    projected: cf.startingBalance + allIncome - allExpenses
-  };
+  for (const incs of Object.values(state.income)) {
+    for (const inc of incs) {
+      if ((inc.pool || 'personal') !== pool) continue;
+      allInc += inc.amount || 0;
+      if (inc.received) recvInc += inc.amount || 0;
+    }
+  }
+  return { onHand: base + recvInc - paidExp, projected: base + allInc - allExp };
+}
+
+function getTotalProjected() {
+  let total = 0;
+  POOLS.forEach(p => { total += getPoolBalance(p).projected; });
+  return total;
 }
 
 function getDayCashNeeded(date) {
@@ -665,31 +669,58 @@ function getDayCashNeeded(date) {
 }
 
 function renderCashTracker() {
-  const d = state.selectedDate;
-  const bal = getRunningBalance(d);
-  const needed = getDayCashNeeded(d);
-
-  const cohEl = document.getElementById('cash-on-hand');
+  document.querySelectorAll('.pool-bal').forEach(el => {
+    const pool = el.dataset.pool;
+    const bal = getPoolBalance(pool);
+    el.textContent = fmtMoney(bal.onHand);
+    el.className = 'cash-value editable pool-bal' + (bal.onHand < 0 ? ' negative' : '');
+  });
+  const proj = getTotalProjected();
   const projEl = document.getElementById('cash-projected');
+  projEl.textContent = fmtMoney(proj);
+  projEl.className = 'cash-value' + (proj < 0 ? ' negative' : '');
+  const needed = getDayCashNeeded(state.selectedDate);
   const needEl = document.getElementById('cash-needed');
-
-  cohEl.textContent = fmtMoney(bal.cashOnHand);
-  projEl.textContent = fmtMoney(bal.projected);
-  projEl.className = 'cash-value' + (bal.projected < 0 ? ' negative' : '');
   needEl.textContent = fmtMoney(needed);
   needEl.className = 'cash-value' + (needed > 0 ? ' warn' : '');
 }
 
+function autoTaskForExpense(exp, dateStr, paid) {
+  const key = dateStr;
+  if (!state.tasks[key]) state.tasks[key] = [];
+  const tag = `[EXP:${exp.id}]`;
+  const existing = state.tasks[key].find(t => t.text.includes(tag));
+  if (paid && !existing) {
+    state.tasks[key].push({ id: uid(), text: `Paid: ${exp.label} ${tag}`, done: true, priority: 'none', createdAt: Date.now() });
+  } else if (!paid && existing) {
+    state.tasks[key] = state.tasks[key].filter(t => t !== existing);
+  }
+}
+
+function autoTaskForIncome(inc, dateStr, received) {
+  const key = dateStr;
+  if (!state.tasks[key]) state.tasks[key] = [];
+  const tag = `[INC:${inc.id}]`;
+  const existing = state.tasks[key].find(t => t.text.includes(tag));
+  if (received && !existing) {
+    state.tasks[key].push({ id: uid(), text: `Received: ${inc.label} ${tag}`, done: true, priority: 'none', createdAt: Date.now() });
+  } else if (!received && existing) {
+    state.tasks[key] = state.tasks[key].filter(t => t !== existing);
+  }
+}
+
 function renderExpenses() {
   const d = state.selectedDate;
+  const dKey = dateKey(d);
   const list = document.getElementById('expense-list');
   const empty = document.getElementById('expense-empty');
   const expenses = getDayExpenses(d);
+  const filtered = expenses.filter(e => state.calendarFilters[expPool(e)]);
 
   list.innerHTML = '';
-  empty.style.display = expenses.length === 0 ? 'block' : 'none';
+  empty.style.display = filtered.length === 0 ? 'block' : 'none';
 
-  expenses.forEach(exp => {
+  filtered.forEach(exp => {
     const li = document.createElement('li');
     li.className = 'expense-item' + (exp.paid ? ' paid' : '');
 
@@ -698,10 +729,10 @@ function renderExpenses() {
     cb.title = exp.paid ? 'Paid' : 'Mark as paid';
     cb.addEventListener('click', async () => {
       exp.paid = !exp.paid;
+      autoTaskForExpense(exp, dKey, exp.paid);
       await saveExpenses();
-      renderExpenses();
-      renderCashTracker();
-      renderCalendar();
+      await saveTasks();
+      renderExpenses(); renderCashTracker(); renderCalendar(); renderCalendarTasks();
     });
     li.appendChild(cb);
 
@@ -718,20 +749,17 @@ function renderExpenses() {
     }
     info.appendChild(label);
     if (exp.notes) {
-      const notes = document.createElement('div');
-      notes.className = 'expense-notes';
-      notes.textContent = exp.notes;
-      info.appendChild(notes);
+      const n = document.createElement('div');
+      n.className = 'expense-notes';
+      n.textContent = exp.notes;
+      info.appendChild(n);
     }
     li.appendChild(info);
 
-    if (exp.category) {
-      const cat = document.createElement('span');
-      cat.className = 'expense-cat ' + exp.category;
-      const catLabels = { investor_debt: 'Debt', monthly: 'Monthly', software: 'SaaS', misc: 'Misc' };
-      cat.textContent = catLabels[exp.category] || exp.category;
-      li.appendChild(cat);
-    }
+    const poolBadge = document.createElement('span');
+    poolBadge.className = 'pool-badge ' + expPool(exp);
+    poolBadge.textContent = POOL_LABELS[expPool(exp)] || expPool(exp);
+    li.appendChild(poolBadge);
 
     const amt = document.createElement('div');
     amt.className = 'expense-amount';
@@ -754,9 +782,7 @@ function renderExpenses() {
       const i = dayExp.findIndex(e => e.id === exp.id);
       if (i >= 0) dayExp.splice(i, 1);
       await saveExpenses();
-      renderExpenses();
-      renderCashTracker();
-      renderCalendar();
+      renderExpenses(); renderCashTracker(); renderCalendar();
     });
     li.appendChild(delBtn);
 
@@ -766,69 +792,79 @@ function renderExpenses() {
 
 function openExpenseModal(existing, date) {
   const isEdit = !!existing;
-  const niceDate = date.toLocaleDateString(undefined, {
-    weekday: 'short', month: 'short', day: 'numeric'
-  });
+  const niceDate = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const poolOpts = POOLS.map(p =>
+    `<option value="${p}" ${(existing ? expPool(existing) : 'personal') === p ? 'selected' : ''}>${POOL_LABELS[p]}</option>`
+  ).join('');
+  const durOpts = ['<option value="0"' + ((!existing || !existing.recurringMonths) ? ' selected' : '') + '>Indefinite</option>']
+    .concat(Array.from({length: 12}, (_, i) => {
+      const m = i + 1;
+      return `<option value="${m}" ${existing && existing.recurringMonths === m ? 'selected' : ''}>${m} month${m > 1 ? 's' : ''}</option>`;
+    })).join('');
+
   openModal(isEdit ? `Edit Expense — ${niceDate}` : `Add Expense — ${niceDate}`, `
     <div>
       <label>Label</label>
-      <input type="text" id="exp-label" placeholder="e.g. Investor payment - Smith"
+      <input type="text" id="exp-label" placeholder="e.g. Hard money payment - 123 Main"
              value="${existing ? escapeAttr(existing.label) : ''}" maxlength="120" />
     </div>
-    <div>
-      <label>Amount ($)</label>
-      <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"
-             value="${existing ? existing.amount : ''}" />
-    </div>
-    <div>
-      <label>Category</label>
-      <select id="exp-category">
-        <option value="investor_debt" ${existing && existing.category === 'investor_debt' ? 'selected' : ''}>Investor Debt</option>
-        <option value="monthly"       ${existing && existing.category === 'monthly' ? 'selected' : ''}>Monthly Payment</option>
-        <option value="software"      ${existing && existing.category === 'software' ? 'selected' : ''}>Software / SaaS</option>
-        <option value="misc"          ${!existing || existing.category === 'misc' ? 'selected' : ''}>Misc</option>
-      </select>
+    <div class="form-row">
+      <div>
+        <label>Amount ($)</label>
+        <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"
+               value="${existing ? existing.amount : ''}" />
+      </div>
+      <div>
+        <label>Account / Pool</label>
+        <select id="exp-pool">${poolOpts}</select>
+      </div>
     </div>
     <div>
       <label>Notes</label>
-      <textarea id="exp-notes" rows="2" placeholder="Contract details, account numbers, etc.">${existing ? escapeAttr(existing.notes || '') : ''}</textarea>
+      <textarea id="exp-notes" rows="2" placeholder="Contract details, account numbers...">${existing ? escapeAttr(existing.notes || '') : ''}</textarea>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <input type="checkbox" id="exp-recurring" style="width:auto;" ${existing && existing.recurring ? 'checked' : ''} />
       <label for="exp-recurring" style="margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);">Recurring monthly</label>
     </div>
+    <div id="exp-dur-row" style="display:${existing && existing.recurring ? 'block' : 'none'};">
+      <label>Recurring Duration</label>
+      <select id="exp-duration">${durOpts}</select>
+    </div>
   `, async () => {
     const label = document.getElementById('exp-label').value.trim();
     const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
-    const category = document.getElementById('exp-category').value;
+    const pool = document.getElementById('exp-pool').value;
     const notes = document.getElementById('exp-notes').value.trim();
     const recurring = document.getElementById('exp-recurring').checked;
+    const recurringMonths = recurring ? parseInt(document.getElementById('exp-duration').value, 10) : 0;
     if (!label || amount <= 0) return;
 
     const dayExp = getDayExpenses(date);
     if (isEdit) {
-      existing.label = label;
-      existing.amount = amount;
-      existing.category = category;
-      existing.notes = notes;
-      existing.recurring = recurring;
+      existing.label = label; existing.amount = amount;
+      existing.pool = pool; existing.notes = notes;
+      existing.recurring = recurring; existing.recurringMonths = recurringMonths;
     } else {
       const exp = {
-        id: uid(), label, notes, amount, category,
-        paid: false, recurring,
-        recurringGroupId: null,
-        createdAt: Date.now()
+        id: uid(), label, notes, amount, pool,
+        paid: false, recurring, recurringMonths,
+        recurringGroupId: null, createdAt: Date.now()
       };
       exp.recurringGroupId = exp.id;
       dayExp.push(exp);
-      if (recurring) generateRecurring(exp, dateKey(date));
+      if (recurring) generateRecurring(exp, dateKey(date), recurringMonths);
     }
     await saveExpenses();
     closeModal();
-    renderExpenses();
-    renderCashTracker();
-    renderCalendar();
+    renderExpenses(); renderCashTracker(); renderCalendar();
   });
+  // Toggle duration visibility
+  const recCb = document.getElementById('exp-recurring');
+  const durRow = document.getElementById('exp-dur-row');
+  if (recCb && durRow) {
+    recCb.addEventListener('change', () => { durRow.style.display = recCb.checked ? 'block' : 'none'; });
+  }
 }
 
 /* ------------------- INCOME ------------------- */
@@ -841,9 +877,10 @@ function getDayIncome(date) {
 
 function renderIncomeSidebar() {
   const d = state.selectedDate;
+  const dKey = dateKey(d);
   const list = document.getElementById('income-list');
   const empty = document.getElementById('income-empty');
-  const items = getDayIncome(d);
+  const items = getDayIncome(d).filter(inc => state.calendarFilters[inc.pool || 'personal']);
 
   list.innerHTML = '';
   empty.style.display = items.length === 0 ? 'block' : 'none';
@@ -857,10 +894,10 @@ function renderIncomeSidebar() {
     cb.title = inc.received ? 'Received' : 'Mark received';
     cb.addEventListener('click', async () => {
       inc.received = !inc.received;
+      autoTaskForIncome(inc, dKey, inc.received);
       await saveIncome();
-      renderIncomeSidebar();
-      renderCashTracker();
-      renderCalendar();
+      await saveTasks();
+      renderIncomeSidebar(); renderCashTracker(); renderCalendar(); renderCalendarTasks();
     });
     li.appendChild(cb);
 
@@ -871,12 +908,17 @@ function renderIncomeSidebar() {
     label.textContent = inc.label;
     info.appendChild(label);
     if (inc.notes) {
-      const notes = document.createElement('div');
-      notes.className = 'expense-notes';
-      notes.textContent = inc.notes;
-      info.appendChild(notes);
+      const n = document.createElement('div');
+      n.className = 'expense-notes';
+      n.textContent = inc.notes;
+      info.appendChild(n);
     }
     li.appendChild(info);
+
+    const poolBadge = document.createElement('span');
+    poolBadge.className = 'pool-badge ' + (inc.pool || 'personal');
+    poolBadge.textContent = POOL_LABELS[inc.pool || 'personal'];
+    li.appendChild(poolBadge);
 
     const amt = document.createElement('div');
     amt.className = 'expense-amount';
@@ -892,9 +934,7 @@ function renderIncomeSidebar() {
       const i = dayInc.findIndex(x => x.id === inc.id);
       if (i >= 0) dayInc.splice(i, 1);
       await saveIncome();
-      renderIncomeSidebar();
-      renderCashTracker();
-      renderCalendar();
+      renderIncomeSidebar(); renderCashTracker(); renderCalendar();
     });
     li.appendChild(delBtn);
 
@@ -904,14 +944,21 @@ function renderIncomeSidebar() {
 
 function openIncomeModal(date) {
   const niceDate = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const poolOpts = POOLS.map(p => `<option value="${p}">${POOL_LABELS[p]}</option>`).join('');
   openModal(`Add Income — ${niceDate}`, `
     <div>
       <label>Source</label>
       <input type="text" id="inc-label" placeholder="e.g. Investor funding - Johnson" maxlength="120" />
     </div>
-    <div>
-      <label>Amount ($)</label>
-      <input type="number" id="inc-amount" placeholder="0.00" min="0" step="0.01" />
+    <div class="form-row">
+      <div>
+        <label>Amount ($)</label>
+        <input type="number" id="inc-amount" placeholder="0.00" min="0" step="0.01" />
+      </div>
+      <div>
+        <label>Account / Pool</label>
+        <select id="inc-pool">${poolOpts}</select>
+      </div>
     </div>
     <div>
       <label>Notes</label>
@@ -920,15 +967,14 @@ function openIncomeModal(date) {
   `, async () => {
     const label = document.getElementById('inc-label').value.trim();
     const amount = parseFloat(document.getElementById('inc-amount').value) || 0;
+    const pool = document.getElementById('inc-pool').value;
     const notes = document.getElementById('inc-notes').value.trim();
     if (!label || amount <= 0) return;
     const dayInc = getDayIncome(date);
-    dayInc.push({ id: uid(), label, amount, notes, received: false, createdAt: Date.now() });
+    dayInc.push({ id: uid(), label, amount, pool, notes, received: false, createdAt: Date.now() });
     await saveIncome();
     closeModal();
-    renderIncomeSidebar();
-    renderCashTracker();
-    renderCalendar();
+    renderIncomeSidebar(); renderCashTracker(); renderCalendar();
   });
 }
 
@@ -1277,24 +1323,17 @@ function openInvestorModal(existing) {
   });
 }
 
-function openSetBalanceModal() {
+function openSetPoolBalanceModal(pool) {
   const cf = state.cashflow;
-  openModal('Set Starting Cash Balance', `
+  if (!cf.pools) cf.pools = {};
+  openModal(`Set ${POOL_LABELS[pool]} Reserve`, `
     <div>
-      <label>Starting Balance ($)</label>
-      <input type="number" id="bal-amount" placeholder="20000" min="0" step="0.01"
-             value="${cf.startingBalance || ''}" />
-    </div>
-    <div>
-      <label>As of Date</label>
-      <input type="date" id="bal-date" value="${cf.startingDate || dateKey(new Date())}" />
+      <label>Current Reserve Balance ($)</label>
+      <input type="number" id="pool-bal-input" placeholder="20000" min="0" step="0.01"
+             value="${cf.pools[pool] || ''}" />
     </div>
   `, async () => {
-    const amount = parseFloat(document.getElementById('bal-amount').value) || 0;
-    const asOf = document.getElementById('bal-date').value;
-    if (!asOf) return;
-    state.cashflow.startingBalance = amount;
-    state.cashflow.startingDate = asOf;
+    cf.pools[pool] = parseFloat(document.getElementById('pool-bal-input').value) || 0;
     await saveCashflow();
     closeModal();
     renderCashTracker();
