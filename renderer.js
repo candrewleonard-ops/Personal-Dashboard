@@ -646,12 +646,11 @@ function getPoolBalance(pool) {
   const anchor = state.calendarMonth;
   const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
   const cutoff = dateKey(lastDay);
-  let paidExp = 0, allExp = 0, recvInc = 0, allInc = 0;
+  let paidExp = 0, recvInc = 0;
   for (const [key, exps] of Object.entries(state.expenses)) {
     if (key > cutoff) continue;
     for (const e of exps) {
       if (expPool(e) !== pool) continue;
-      allExp += e.amount || 0;
       if (e.paid) paidExp += e.amount || 0;
     }
   }
@@ -659,22 +658,43 @@ function getPoolBalance(pool) {
     if (key > cutoff) continue;
     for (const inc of incs) {
       if ((inc.pool || 'personal') !== pool) continue;
-      allInc += inc.amount || 0;
       if (inc.received) recvInc += inc.amount || 0;
     }
   }
-  return { onHand: base + recvInc - paidExp, projected: base + allInc - allExp };
+  return { onHand: base + recvInc - paidExp };
 }
 
-function getTotalProjected() {
-  let total = 0;
-  POOLS.forEach(p => { total += getPoolBalance(p).projected; });
-  return total;
-}
-
-function getDayCashNeeded(date) {
-  const exps = state.expenses[dateKey(date)] || [];
-  return exps.filter(e => !e.paid).reduce((sum, e) => sum + (e.amount || 0), 0);
+function getPoolCashNeeded(pool) {
+  const base = (state.cashflow.pools && state.cashflow.pools[pool]) || 0;
+  const allDates = new Set([...Object.keys(state.expenses), ...Object.keys(state.income)]);
+  const sorted = [...allDates].sort();
+  let running = base;
+  for (const key of sorted) {
+    for (const inc of (state.income[key] || [])) {
+      if ((inc.pool || 'personal') === pool && inc.received) running += inc.amount || 0;
+    }
+    for (const e of (state.expenses[key] || [])) {
+      if (expPool(e) === pool && e.paid) running -= e.amount || 0;
+    }
+  }
+  let projected = running;
+  let shortfallDate = null;
+  let shortfallAmount = 0;
+  for (const key of sorted) {
+    for (const inc of (state.income[key] || [])) {
+      if ((inc.pool || 'personal') === pool && !inc.received) projected += inc.amount || 0;
+    }
+    for (const e of (state.expenses[key] || [])) {
+      if (expPool(e) === pool && !e.paid) {
+        projected -= e.amount || 0;
+        if (projected < 0 && !shortfallDate) {
+          shortfallDate = key;
+          shortfallAmount = Math.abs(projected);
+        }
+      }
+    }
+  }
+  return { shortfallDate, shortfallAmount };
 }
 
 function renderCashTracker() {
@@ -684,14 +704,24 @@ function renderCashTracker() {
     el.textContent = fmtMoney(bal.onHand);
     el.className = 'cash-value editable pool-bal' + (bal.onHand < 0 ? ' negative' : '');
   });
-  const proj = getTotalProjected();
-  const projEl = document.getElementById('cash-projected');
-  projEl.textContent = fmtMoney(proj);
-  projEl.className = 'cash-value' + (proj < 0 ? ' negative' : '');
-  const needed = getDayCashNeeded(state.selectedDate);
-  const needEl = document.getElementById('cash-needed');
-  needEl.textContent = fmtMoney(needed);
-  needEl.className = 'cash-value' + (needed > 0 ? ' warn' : '');
+  POOLS.forEach(pool => {
+    const need = getPoolCashNeeded(pool);
+    const needEl = document.getElementById('need-' + pool);
+    const dateEl = document.getElementById('need-date-' + pool);
+    if (!needEl) return;
+    if (need.shortfallDate) {
+      needEl.textContent = fmtMoney(need.shortfallAmount);
+      needEl.className = 'cash-value negative';
+      const d = new Date(need.shortfallDate + 'T12:00:00');
+      dateEl.textContent = 'by ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      dateEl.className = 'need-date urgent';
+    } else {
+      needEl.textContent = '$0';
+      needEl.className = 'cash-value';
+      dateEl.textContent = 'All covered';
+      dateEl.className = 'need-date';
+    }
+  });
 }
 
 function autoTaskForExpense(exp, dateStr, paid) {

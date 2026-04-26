@@ -201,13 +201,25 @@
                 </div>
               </div>
               <div class="cash-summary">
-                <div class="cash-metric">
-                  <div class="cash-label">Projected Total</div>
-                  <div class="cash-value" id="cash-projected">$0</div>
+                <div class="pool-need" data-pool="personal">
+                  <div class="cash-label">Personal Needed</div>
+                  <div class="cash-value" id="need-personal">$0</div>
+                  <div class="need-date" id="need-date-personal"></div>
                 </div>
-                <div class="cash-metric">
-                  <div class="cash-label">Cash Needed Today</div>
-                  <div class="cash-value warn" id="cash-needed">$0</div>
+                <div class="pool-need" data-pool="business">
+                  <div class="cash-label">Business Needed</div>
+                  <div class="cash-value" id="need-business">$0</div>
+                  <div class="need-date" id="need-date-business"></div>
+                </div>
+                <div class="pool-need" data-pool="flip_payments">
+                  <div class="cash-label">Flip Pay Needed</div>
+                  <div class="cash-value" id="need-flip_payments">$0</div>
+                  <div class="need-date" id="need-date-flip_payments"></div>
+                </div>
+                <div class="pool-need" data-pool="renovation">
+                  <div class="cash-label">Reno Needed</div>
+                  <div class="cash-value" id="need-renovation">$0</div>
+                  <div class="need-date" id="need-date-renovation"></div>
                 </div>
               </div>
             </div>

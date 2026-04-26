@@ -594,10 +594,24 @@ input:focus, textarea:focus, select:focus {
 .cash-summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   border-top: 1px solid var(--brand-navy-line);
   padding-top: 10px;
 }
+.pool-need {
+  text-align: center;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+.pool-need .cash-value { font-size: 14px; }
+.need-date {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.need-date.urgent { color: var(--danger); }
 .cash-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
