@@ -1703,6 +1703,128 @@ function openHabitModal() {
   });
 }
 
+/* ------------------- AI COMMAND BAR ------------------- */
+const CMD_PLACEHOLDERS = [
+  'Add a $45k rehab loan owed May 15th...',
+  'Mark the Phoenix note as paid today...',
+  'Add tasks: call contractor Mon, inspect site Tue...',
+  'Set renovation reserve to $20,000...',
+  'Add deal at 742 Evergreen Terrace, PP $180k, ARV $280k...',
+  'What expenses do I have this month?...',
+  'Add $5,500 investor income for Wednesday...',
+];
+let cmdPlaceholderIdx = 0;
+let cmdPlaceholderTimer = null;
+
+function initCommandBar() {
+  const input = document.getElementById('cmd-input');
+  const responseArea = document.getElementById('cmd-response');
+  const messagesEl = document.getElementById('cmd-messages');
+  const wrap = document.querySelector('.cmd-input-wrap');
+  if (!input || !bridge.ai) return;
+
+  // Rotating placeholders
+  cmdPlaceholderTimer = setInterval(() => {
+    cmdPlaceholderIdx = (cmdPlaceholderIdx + 1) % CMD_PLACEHOLDERS.length;
+    input.placeholder = CMD_PLACEHOLDERS[cmdPlaceholderIdx];
+  }, 4000);
+
+  // Ctrl+K focus
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      input.focus();
+    }
+  });
+
+  // Listen for AI events
+  bridge.ai.clearListeners();
+  bridge.ai.onChunk((text) => {
+    let last = messagesEl.querySelector('.cmd-msg.assistant:last-child');
+    if (!last) {
+      last = document.createElement('div');
+      last.className = 'cmd-msg assistant';
+      messagesEl.appendChild(last);
+    }
+    last.textContent += text;
+    responseArea.scrollTop = responseArea.scrollHeight;
+  });
+
+  bridge.ai.onToolCall((tc) => {
+    const card = document.createElement('div');
+    card.className = 'cmd-confirm' + (tc.destructive ? ' destructive' : '');
+    card.innerHTML = `
+      <div class="cmd-confirm-title">${tc.destructive ? 'Destructive Action' : 'Confirm Action'}</div>
+      <div class="cmd-confirm-desc">${escapeAttr(tc.description)}</div>
+      <div class="cmd-confirm-params">${JSON.stringify(tc.input, null, 2)}</div>
+      <div class="cmd-confirm-btns">
+        <button class="btn primary cmd-yes">Confirm</button>
+        <button class="btn secondary cmd-no">Cancel</button>
+      </div>
+    `;
+    messagesEl.appendChild(card);
+    responseArea.scrollTop = responseArea.scrollHeight;
+
+    card.querySelector('.cmd-yes').addEventListener('click', () => {
+      bridge.ai.confirm(true);
+      card.querySelector('.cmd-confirm-btns').innerHTML = '<span style="color:var(--success);font-size:12px;font-weight:700;">Confirmed</span>';
+    });
+    card.querySelector('.cmd-no').addEventListener('click', () => {
+      bridge.ai.confirm(false);
+      card.querySelector('.cmd-confirm-btns').innerHTML = '<span style="color:var(--text-muted);font-size:12px;font-weight:700;">Cancelled</span>';
+    });
+  });
+
+  bridge.ai.onDataChanged(() => {
+    safeStep('reload-after-ai', async () => {
+      await loadAll();
+      renderTasks(); renderStats(); renderCalendar(); renderExpenses();
+      renderIncomeSidebar(); renderCashTracker(); renderDeals(); renderInvestors();
+      renderHabits(); renderDeadlines(); renderDayNotes(); renderCalendarTasks();
+    });
+  });
+
+  // Submit
+  input.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Enter') return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    e.preventDefault();
+    input.value = '';
+
+    responseArea.classList.remove('hidden');
+    const userEl = document.createElement('div');
+    userEl.className = 'cmd-msg user';
+    userEl.textContent = '> ' + msg;
+    messagesEl.appendChild(userEl);
+    wrap.classList.add('thinking');
+    responseArea.scrollTop = responseArea.scrollHeight;
+
+    const result = await bridge.ai.chat(msg);
+    wrap.classList.remove('thinking');
+
+    if (result && result.error) {
+      const errEl = document.createElement('div');
+      errEl.className = 'cmd-msg error';
+      errEl.textContent = result.error;
+      messagesEl.appendChild(errEl);
+    }
+    responseArea.scrollTop = responseArea.scrollHeight;
+  });
+
+  // Click outside to collapse
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.cmd-bar') && !responseArea.classList.contains('hidden')) {
+      responseArea.classList.add('hidden');
+    }
+  });
+  input.addEventListener('focus', () => {
+    if (messagesEl.children.length > 0) {
+      responseArea.classList.remove('hidden');
+    }
+  });
+}
+
 /* History-based habits: streak is auto-calculated from history every render,
  * so no manual reconciliation needed when a day is skipped. */
 
@@ -1769,6 +1891,7 @@ async function init() {
   safeStep('renderDeals', renderDeals);
   safeStep('renderInvestors', renderInvestors);
   safeStep('renderHabits', renderHabits);
+  safeStep('initCommandBar', initCommandBar);
 
   setInterval(() => safeStep('tickClock', tickClock), 1000);
 

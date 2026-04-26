@@ -28,6 +28,7 @@
     },
     "files": [
       "main.js",
+      "ai-tools.js",
       "preload.js",
       "index.html",
       "styles.css",
@@ -36,8 +37,18 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/logo.png",
       "signAndEditExecutable": false
@@ -50,5 +61,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Reinnovation Dashboard"
     }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1"
   }
 }
