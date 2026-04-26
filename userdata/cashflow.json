@@ -1,0 +1,10 @@
+{
+  "startingBalance": 0,
+  "startingDate": null,
+  "pools": {
+    "personal": 312,
+    "business": 0,
+    "flip_payments": 12850,
+    "renovation": 12840
+  }
+}

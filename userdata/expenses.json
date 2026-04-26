@@ -1,0 +1,206 @@
+{
+  "2026-04-25": [],
+  "2026-04-22": [],
+  "2026-04-24": [],
+  "2026-04-23": [],
+  "2026-04-29": [],
+  "2026-04-28": [],
+  "2026-05-01": [
+    {
+      "id": "moewpxr4orx5q",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": false,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870497
+    }
+  ],
+  "2026-06-01": [
+    {
+      "id": "moewpxr7njsq5",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870499
+    }
+  ],
+  "2026-07-01": [
+    {
+      "id": "moewpxr89qeig",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2026-08-01": [
+    {
+      "id": "moewpxr88amih",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2026-09-01": [
+    {
+      "id": "moewpxr82v9ht",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2026-10-01": [
+    {
+      "id": "moewpxr8zqfx6",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2026-11-01": [
+    {
+      "id": "moewpxr8brhe5",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2026-12-01": [
+    {
+      "id": "moewpxr8zm4ad",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2027-01-01": [
+    {
+      "id": "moewpxr8yz6c1",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870500
+    }
+  ],
+  "2027-02-01": [
+    {
+      "id": "moewpxr9vexyw",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870501
+    }
+  ],
+  "2027-03-01": [
+    {
+      "id": "moewpxr9zd5zz",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870501
+    }
+  ],
+  "2027-04-01": [
+    {
+      "id": "moewpxr97nnk5",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870501
+    }
+  ],
+  "2027-05-01": [
+    {
+      "id": "moewpxr9bqq78",
+      "label": "All Hard Money Payments",
+      "notes": "",
+      "amount": 13000,
+      "pool": "flip_payments",
+      "paid": false,
+      "recurring": true,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewpxr4orx5q",
+      "createdAt": 1777155870501
+    }
+  ],
+  "2026-05-04": [
+    {
+      "id": "moewqug49651s",
+      "label": "All new floors in columbus",
+      "notes": "Steph and Crew doing it",
+      "amount": 4800,
+      "pool": "renovation",
+      "paid": true,
+      "recurring": false,
+      "recurringMonths": 0,
+      "recurringGroupId": "moewqug49651s",
+      "createdAt": 1777155912868
+    }
+  ],
+  "2026-05-06": [],
+  "2026-05-02": []
+}

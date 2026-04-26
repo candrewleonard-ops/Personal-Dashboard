@@ -1,0 +1,17 @@
+{
+  "habits": [
+    {
+      "id": "mo0frkcp68ewj",
+      "name": "Woke up <7",
+      "streak": 0,
+      "lastChecked": null,
+      "createdAt": 1776280866505,
+      "history": []
+    }
+  ],
+  "pomodoro": {
+    "sessionsToday": 0,
+    "lastDate": "2026-04-25",
+    "totalMinutes": 0
+  }
+}
