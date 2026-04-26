@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reinnovation Homes Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Web-only: allow body scroll on small screens */
+    html, body { overflow: auto; }
+    .sync-btns { display: flex; gap: 6px; margin-top: 10px; }
+    .sync-btn {
+      flex: 1; padding: 8px 6px; border-radius: 6px; border: 1px solid var(--brand-navy-line);
+      background: var(--brand-navy-3); color: var(--text-dim); font-size: 11px;
+      font-weight: 700; letter-spacing: 0.3px; cursor: pointer; text-align: center;
+    }
+    .sync-btn:hover { color: #fff; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 60 L60 18 L105 60 L105 105 L15 105 Z"
+                  fill="none" stroke="currentColor" stroke-width="9"
+                  stroke-linejoin="round" />
+            <text x="60" y="88" text-anchor="middle"
+                  font-family="Arial Black, Helvetica, sans-serif"
+                  font-size="46" font-weight="900" fill="currentColor">Re</text>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-line-1">REINNOVATION</div>
+          <div class="brand-line-2">HOMES</div>
+        </div>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">
+          <span class="tab-icon">&#9632;</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="tab" data-tab="calendar">
+          <span class="tab-icon">&#128197;</span>
+          <span>Calendar</span>
+        </button>
+        <button class="tab" data-tab="deals">
+          <span class="tab-icon">&#9878;</span>
+          <span>Deal Pipeline</span>
+        </button>
+        <button class="tab" data-tab="investors">
+          <span class="tab-icon">&#9830;</span>
+          <span>Investors</span>
+        </button>
+        <button class="tab" data-tab="focus">
+          <span class="tab-icon">&#9733;</span>
+          <span>Focus &amp; Habits</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="live-clock" id="sidebar-clock">--:--:--</div>
+        <div class="live-date" id="sidebar-date">&nbsp;</div>
+        <div class="sync-btns">
+          <button class="sync-btn" id="export-btn" title="Download all data as JSON">Export</button>
+          <button class="sync-btn" id="import-btn" title="Import data from JSON file">Import</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- =================== DASHBOARD =================== -->
+      <section class="page active" id="page-dashboard">
+        <header class="page-header">
+          <div>
+            <div class="greeting" id="greeting">Good morning</div>
+            <h1 class="headline" id="headline-date">Loading&hellip;</h1>
+            <div class="subline" id="headline-time">&nbsp;</div>
+          </div>
+          <div class="day-nav">
+            <button class="nav-btn" id="day-prev" title="Previous day">&larr;</button>
+            <button class="nav-btn today" id="day-today" title="Jump to today">Today</button>
+            <button class="nav-btn" id="day-next" title="Next day">&rarr;</button>
+          </div>
+        </header>
+
+        <div class="grid dash-grid">
+          <div class="card tasks-card">
+            <div class="card-head">
+              <h2>Tasks</h2>
+              <div class="card-head-right">
+                <div class="counter" id="task-counter">0 / 0</div>
+                <button class="add-btn" id="add-task-btn" title="Add task">+</button>
+              </div>
+            </div>
+            <ul class="task-list" id="task-list"></ul>
+            <div class="empty-state" id="task-empty">No tasks yet. Hit the + to plan your day.</div>
+          </div>
+
+          <div class="card stats-card">
+            <div class="card-head">
+              <h2>Today at a glance</h2>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat-label">Tasks done</div>
+                <div class="stat-value" id="stat-done">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Open tasks</div>
+                <div class="stat-value" id="stat-open">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Habit streaks</div>
+                <div class="stat-value" id="stat-streaks">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Focus minutes</div>
+                <div class="stat-value" id="stat-focus">0</div>
+              </div>
+            </div>
+            <div class="progress-block">
+              <div class="progress-label">
+                <span>Day progress</span>
+                <span id="progress-pct">0%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="card deadlines-card">
+            <div class="card-head">
+              <h2>Upcoming (7 days)</h2>
+            </div>
+            <ul class="deadline-list" id="deadline-list"></ul>
+            <div class="empty-state" id="deadline-empty">All clear for the next 7 days.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== CALENDAR =================== -->
+      <section class="page" id="page-calendar">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Plan your month</div>
+            <h1 class="headline" id="calendar-month-title">Loading&hellip;</h1>
+            <div class="subline">Click any day to manage its to&#8209;dos.</div>
+          </div>
+          <div class="day-nav">
+            <button class="nav-btn" id="cal-prev" title="Previous month">&larr;</button>
+            <button class="nav-btn today" id="cal-today" title="Jump to this month">This Month</button>
+            <button class="nav-btn" id="cal-next" title="Next month">&rarr;</button>
+          </div>
+        </header>
+
+        <div class="grid calendar-layout">
+          <div class="card calendar-card">
+            <div class="cal-filters" id="cal-filters">
+              <label><input type="checkbox" checked data-pool="personal" /> Personal</label>
+              <label><input type="checkbox" checked data-pool="business" /> Business</label>
+              <label><input type="checkbox" checked data-pool="flip_payments" /> Flip Payments</label>
+              <label><input type="checkbox" checked data-pool="renovation" /> Renovation</label>
+            </div>
+            <div class="calendar-weekdays">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+              <div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+          </div>
+
+          <div class="card day-panel-card">
+            <div class="card-head">
+              <div>
+                <h2 id="day-tasks-title">Today</h2>
+                <div class="day-tasks-sub" id="day-tasks-sub">&nbsp;</div>
+              </div>
+            </div>
+
+            <div class="cash-tracker">
+              <div class="pool-grid">
+                <div class="pool-item">
+                  <div class="cash-label">Personal</div>
+                  <div class="cash-value editable pool-bal" data-pool="personal" title="Click to set reserve">$0</div>
+                </div>
+                <div class="pool-item">
+                  <div class="cash-label">Business</div>
+                  <div class="cash-value editable pool-bal" data-pool="business" title="Click to set reserve">$0</div>
+                </div>
+                <div class="pool-item">
+                  <div class="cash-label">Flip Payments</div>
+                  <div class="cash-value editable pool-bal" data-pool="flip_payments" title="Click to set reserve">$0</div>
+                </div>
+                <div class="pool-item">
+                  <div class="cash-label">Renovation</div>
+                  <div class="cash-value editable pool-bal" data-pool="renovation" title="Click to set reserve">$0</div>
+                </div>
+              </div>
+              <div class="cash-summary">
+                <div class="cash-metric">
+                  <div class="cash-label">Projected Total</div>
+                  <div class="cash-value" id="cash-projected">$0</div>
+                </div>
+                <div class="cash-metric">
+                  <div class="cash-label">Cash Needed Today</div>
+                  <div class="cash-value warn" id="cash-needed">$0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Income</h3>
+                <button class="add-btn small" id="add-income-btn" title="Add income">+</button>
+              </div>
+              <ul class="expense-list income-list" id="income-list"></ul>
+              <div class="empty-state small" id="income-empty">No deposits this day.</div>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Expenses</h3>
+                <button class="add-btn small" id="add-expense-btn" title="Add expense">+</button>
+              </div>
+              <ul class="expense-list" id="expense-list"></ul>
+              <div class="empty-state small" id="expense-empty">No expenses. Tap + to add one.</div>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>Notes</h3>
+              </div>
+              <textarea class="day-notes" id="day-notes" rows="3" placeholder="Meeting notes, ideas, updates..."></textarea>
+            </div>
+
+            <div class="panel-divider"></div>
+
+            <div class="panel-section">
+              <div class="panel-section-head">
+                <h3>To&#8209;dos</h3>
+                <div class="card-head-right">
+                  <div class="counter" id="day-tasks-counter">0 / 0</div>
+                  <button class="add-btn small" id="add-day-task-btn" title="Add task">+</button>
+                </div>
+              </div>
+              <ul class="task-list" id="day-task-list"></ul>
+              <div class="empty-state small" id="day-task-empty">No to&#8209;dos. Tap + to add one.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== DEAL PIPELINE =================== -->
+      <section class="page" id="page-deals">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Your pipeline</div>
+            <h1 class="headline">Deal Pipeline</h1>
+            <div class="subline">Drag deals through stages from lead to closed.</div>
+          </div>
+          <button class="add-btn big" id="add-deal-btn">+ New Deal</button>
+        </header>
+        <div class="kanban" id="kanban">
+          <div class="kanban-col" data-stage="lead">
+            <div class="kanban-col-head">Lead</div>
+            <div class="kanban-cards" id="kanban-lead"></div>
+          </div>
+          <div class="kanban-col" data-stage="under_contract">
+            <div class="kanban-col-head">Under Contract</div>
+            <div class="kanban-cards" id="kanban-under_contract"></div>
+          </div>
+          <div class="kanban-col" data-stage="due_diligence">
+            <div class="kanban-col-head">Due Diligence</div>
+            <div class="kanban-cards" id="kanban-due_diligence"></div>
+          </div>
+          <div class="kanban-col" data-stage="closing">
+            <div class="kanban-col-head">Closing</div>
+            <div class="kanban-cards" id="kanban-closing"></div>
+          </div>
+          <div class="kanban-col" data-stage="closed">
+            <div class="kanban-col-head">Closed</div>
+            <div class="kanban-cards" id="kanban-closed"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== INVESTORS =================== -->
+      <section class="page" id="page-investors">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Capital partners</div>
+            <h1 class="headline">Investor Dashboard</h1>
+            <div class="subline">Track capital deployed, returns paid, and payment history.</div>
+          </div>
+          <button class="add-btn big" id="add-investor-btn">+ Add Investor</button>
+        </header>
+        <div class="investor-grid" id="investor-grid"></div>
+        <div class="empty-state big" id="investor-empty">No investors yet. Click + to add one.</div>
+      </section>
+
+      <!-- =================== FOCUS & HABITS =================== -->
+      <section class="page" id="page-focus">
+        <header class="page-header">
+          <div>
+            <div class="greeting">Stay locked in</div>
+            <h1 class="headline" id="focus-headline">Focus &amp; Habits</h1>
+            <div class="subline" id="focus-subline">Tracking habits for today.</div>
+          </div>
+          <div class="day-nav">
+            <button class="nav-btn" id="focus-prev" title="Previous day">&larr;</button>
+            <button class="nav-btn today" id="focus-today" title="Jump to today">Today</button>
+            <button class="nav-btn" id="focus-next" title="Next day">&rarr;</button>
+          </div>
+        </header>
+
+        <div class="grid focus-grid">
+          <div class="card pomodoro-card">
+            <div class="card-head">
+              <h2>Focus Session</h2>
+              <div class="pomodoro-mode">
+                <button class="mode-btn active" data-minutes="25">25m Focus</button>
+                <button class="mode-btn" data-minutes="5">5m Break</button>
+                <button class="mode-btn" data-minutes="50">50m Deep</button>
+              </div>
+            </div>
+            <div class="timer-display" id="timer-display">25:00</div>
+            <div class="timer-controls">
+              <button class="timer-btn primary" id="timer-start">Start</button>
+              <button class="timer-btn" id="timer-pause">Pause</button>
+              <button class="timer-btn" id="timer-reset">Reset</button>
+            </div>
+            <div class="pomodoro-stats">
+              <div>Sessions today: <b id="pomo-sessions">0</b></div>
+              <div>Focus minutes: <b id="pomo-minutes">0</b></div>
+            </div>
+          </div>
+
+          <div class="card habits-card">
+            <div class="card-head">
+              <h2>Habit Streaks</h2>
+              <button class="add-btn" id="add-habit-btn" title="Add habit">+</button>
+            </div>
+            <ul class="habit-list" id="habit-list"></ul>
+            <div class="empty-state" id="habit-empty">
+              No habits yet. Click + to start a streak.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =================== MODAL =================== -->
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <div class="modal" id="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">Add Task</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-foot">
+        <button class="btn secondary" id="modal-cancel">Cancel</button>
+        <button class="btn primary" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file" accept=".json" style="display:none" />
+
+  <script src="renderer.js"></script>
+  <script>
+    // Export: download all localStorage data as JSON
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const data = {};
+      const keys = ['tasks','habits','expenses','income','cashflow','notes','deals','investors','settings'];
+      keys.forEach(k => {
+        const raw = localStorage.getItem('rh_' + k);
+        if (raw) data[k] = JSON.parse(raw);
+      });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reinnovation-dashboard-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Import: load JSON file into localStorage
+    document.getElementById('import-btn').addEventListener('click', () => {
+      document.getElementById('import-file').click();
+    });
+    document.getElementById('import-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          Object.entries(data).forEach(([k, v]) => {
+            localStorage.setItem('rh_' + k, JSON.stringify(v));
+          });
+          location.reload();
+        } catch (err) {
+          alert('Invalid JSON file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+  </script>
+</body>
+</html>
