@@ -9,8 +9,8 @@
   "scripts": {
     "icon": "node scripts/generate-icon.js",
     "start": "electron .",
-    "prepack": "node scripts/generate-icon.js",
-    "predist": "node scripts/generate-icon.js",
+    "prepack": "",
+    "predist": "",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win --x64",
     "dist:portable": "electron-builder --win portable --x64"
