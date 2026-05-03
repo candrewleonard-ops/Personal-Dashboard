@@ -41,6 +41,7 @@ const state = {
   notes: {},
   deals: [],
   investors: [],
+  content: { identity: {}, goals: [], hooks: [], ideas: [], confused: '' },
   currentDate: new Date(),   // currently-viewed day on Dashboard
   calendarMonth: new Date(), // anchors the month shown on Calendar
   selectedDate: new Date(),  // day highlighted in the Calendar side panel
@@ -108,6 +109,7 @@ async function loadAll() {
   state.notes     = (await bridge.store.get('notes'))     || {};
   state.deals     = (await bridge.store.get('deals'))     || [];
   state.investors = (await bridge.store.get('investors')) || [];
+  state.content   = (await bridge.store.get('content'))   || { identity: {}, goals: [], hooks: [], ideas: [], confused: '' };
 
   // Reset pomodoro counter at date change
   const t = todayKey();
@@ -127,6 +129,7 @@ async function saveIncome()    { await bridge.store.set('income',    state.incom
 async function saveNotes()     { await bridge.store.set('notes',     state.notes); }
 async function saveDeals()     { await bridge.store.set('deals',     state.deals); }
 async function saveInvestors() { await bridge.store.set('investors', state.investors); }
+async function saveContent()   { await bridge.store.set('content',   state.content); }
 
 /* ------------------- TABS ------------------- */
 function initTabs() {
@@ -151,6 +154,8 @@ function initTabs() {
         renderInvestors();
       } else if (target === 'focus') {
         renderHabits();
+      } else if (target === 'content') {
+        // already initialized, just visible
       }
     });
   });
@@ -1714,6 +1719,120 @@ function openHabitModal() {
   });
 }
 
+/* ------------------- CONTENT LAB ------------------- */
+function initContentLab() {
+  const c = state.content;
+  if (!c.hooks) c.hooks = [];
+  if (!c.ideas) c.ideas = [];
+  if (!c.goals) c.goals = [];
+  if (!c.identity) c.identity = {};
+
+  const fields = {
+    'cb-who-i-am': 'whoIAm', 'cb-who-i-serve': 'whoIServe',
+    'cb-what-they-want': 'whatTheyWant', 'cb-what-i-give': 'whatIGive',
+    'cb-confused': 'confused'
+  };
+  for (const [id, key] of Object.entries(fields)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (key === 'confused') el.value = c.confused || '';
+    else el.value = c.identity[key] || '';
+    el.addEventListener('input', () => {
+      if (key === 'confused') c.confused = el.value;
+      else c.identity[key] = el.value;
+      saveContent();
+    });
+  }
+
+  renderContentGoals();
+  document.getElementById('cb-add-goal').addEventListener('click', () => {
+    c.goals.push('New goal');
+    saveContent();
+    renderContentGoals();
+  });
+
+  renderContentHooks();
+  document.getElementById('cb-hook-input').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const val = e.target.value.trim();
+    if (!val) return;
+    c.hooks.push(val);
+    e.target.value = '';
+    saveContent();
+    renderContentHooks();
+  });
+
+  renderContentIdeas();
+  document.getElementById('cb-idea-input').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const val = e.target.value.trim();
+    if (!val) return;
+    c.ideas.push(val);
+    e.target.value = '';
+    saveContent();
+    renderContentIdeas();
+  });
+}
+
+function renderContentGoals() {
+  const list = document.getElementById('cb-goals');
+  if (!list) return;
+  list.innerHTML = '';
+  state.content.goals.forEach((g, i) => {
+    const div = document.createElement('div');
+    div.className = 'stark-goal-item';
+    div.innerHTML = `<input type="text" class="stark-input stark-goal-text" value="${escapeAttr(g)}" />
+      <div class="stark-goal-bar"><div class="stark-goal-fill" style="width:0%"></div></div>`;
+    const inp = div.querySelector('input');
+    inp.addEventListener('input', () => { state.content.goals[i] = inp.value; saveContent(); });
+    list.appendChild(div);
+  });
+}
+
+function renderContentHooks() {
+  const grid = document.getElementById('cb-hooks');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const defaults = [
+    "Nobody talks about this in real estate...",
+    "This deal looks good but it's actually terrible...",
+    "If you're a landlord, watch this...",
+    "I just almost lost $X on this deal...",
+    "Here's exactly how I..."
+  ];
+  const hooks = state.content.hooks.length > 0 ? state.content.hooks : defaults;
+  if (state.content.hooks.length === 0) { state.content.hooks = [...defaults]; saveContent(); }
+  hooks.forEach((h, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'stark-hook';
+    chip.innerHTML = `<span>${escapeAttr(h)}</span><span class="hook-del">&times;</span>`;
+    chip.querySelector('.hook-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.content.hooks.splice(i, 1);
+      saveContent();
+      renderContentHooks();
+    });
+    grid.appendChild(chip);
+  });
+}
+
+function renderContentIdeas() {
+  const list = document.getElementById('cb-ideas');
+  if (!list) return;
+  list.innerHTML = '';
+  state.content.ideas.forEach((idea, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'stark-idea';
+    chip.innerHTML = `<span>${escapeAttr(idea)}</span><span class="idea-del">&times;</span>`;
+    chip.querySelector('.idea-del').addEventListener('click', () => {
+      state.content.ideas.splice(i, 1);
+      saveContent();
+      renderContentIdeas();
+    });
+    list.appendChild(chip);
+  });
+}
+
 /* History-based habits: streak is auto-calculated from history every render,
  * so no manual reconciliation needed when a day is skipped. */
 
@@ -1780,6 +1899,7 @@ async function init() {
   safeStep('renderDeals', renderDeals);
   safeStep('renderInvestors', renderInvestors);
   safeStep('renderHabits', renderHabits);
+  safeStep('initContentLab', initContentLab);
 
   setInterval(() => safeStep('tickClock', tickClock), 1000);
 
