@@ -14,7 +14,8 @@ const FILES = {
   income: path.join(DATA_DIR, 'income.json'),
   notes: path.join(DATA_DIR, 'notes.json'),
   deals: path.join(DATA_DIR, 'deals.json'),
-  investors: path.join(DATA_DIR, 'investors.json')
+  investors: path.join(DATA_DIR, 'investors.json'),
+  content: path.join(DATA_DIR, 'content.json')
 };
 
 const DEFAULTS = {
@@ -26,7 +27,8 @@ const DEFAULTS = {
   income: {},
   notes: {},
   deals: [],
-  investors: []
+  investors: [],
+  content: { identity: {}, goals: [], hooks: [], ideas: [], confused: '' }
 };
 
 function ensureDataDir() {
